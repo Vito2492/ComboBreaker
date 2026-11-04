@@ -53,6 +53,9 @@ typedef struct {
     int health_max;
     uint32_t timer_tick, timer_ones, timer_tens;   // round clock
     uint32_t vars, vars_len;    // range of game variables for netplay's quick check
+    // For the console-style menu (home.c): 1 while the attract loop runs; per
+    // player (player_step apart) 1 once in a game and once a fighter is picked.
+    uint32_t attract, in_game, picked, player_step;
 
     // Operator adjustments on the disk: adj_len bytes at adj_data, the first
     // set once they were edited, with the game's checksum of them at adj_sum.

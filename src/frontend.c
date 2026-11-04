@@ -15,6 +15,7 @@
 #include "state.h"
 #include "netplay.h"
 #include "training.h"
+#include "home.h"
 #include "launch.h"
 #include "icon.h"
 #include "adjust.h"
@@ -195,6 +196,7 @@ static void present(const char *status)
     osd_clear(ov);
     draw_inputs(ov);
     draw_perf(ov);
+    if (!netplay_running()) home_draw(ov);
     draw_menu(ov);
     osd_draw(ov, status);           // after the menu: messages show over it too
     video_present(px, ov, cfg.filter, cfg.scale_mode);
@@ -832,6 +834,11 @@ static void cycle(int *v, int n, int dir) { *v = ((*v + dir) % n + n) % n; }
 
 static void go(int page, int sel) { menu_page = page; menu_sel = sel; capturing = -1; }
 
+// For the home menu (home.h).
+void frontend_open_controls(void) { menu_open = true; go(PG_CONTROLS, 0); stop_audio(); }
+void frontend_reset_game(void) { hard_reset(); }
+void frontend_settings_changed(void) { menu_changed = true; }
+
 static void start_join(void)
 {
     if (!*cfg.net_address) { osd_message("Enter the host's address first"); return; }
@@ -1262,6 +1269,7 @@ static void emulate_frame(void)
     uint64_t t0 = SDL_GetPerformanceCounter();
     uint32_t held[2];
     read_players(held);
+    home_inputs(held);
     training_inputs(held);
     auto_coin(held);
     record_inputs(held);
@@ -1488,6 +1496,15 @@ int frontend_main(void)
         bool fast = key_held(HK_FAST) || pad_held(cfg.pad_fast) || booting;
         bool rewinding = cfg.rewind && (key_held(HK_REWIND) || pad_held(cfg.pad_rewind));
 
+        if (home_paused() && !menu_open) {
+            uint32_t held[2];
+            read_players(held);
+            home_inputs(held);              // the pause panel's navigation
+            present("");
+            if (!vsync) SDL_Delay(16);
+            next = SDL_GetPerformanceCounter();
+            continue;
+        }
         if (menu_open || (paused && !step_once) || (!focused && cfg.pause_unfocused)) {
             present(menu_open ? NULL : "PAUSED");
             if (!vsync) SDL_Delay(16);

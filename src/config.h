@@ -50,6 +50,7 @@ typedef struct {
     bool input_display;
     bool perf_overlay;
     bool training;             // health refill + timer freeze
+    bool home_menu;            // console-style menu (Arcade, VS, Practice, Options) on Start
     // the board's DIP switches
     bool free_play;
     char version[16];

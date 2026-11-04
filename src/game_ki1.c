@@ -33,6 +33,8 @@ const game_t game_ki1 = {
     .health_p1 = 0x8bc55, .health_step = 0x100, .health_max = 120,   // each of the two bars
     .timer_tick = 0x884f8, .timer_ones = 0x884f9, .timer_tens = 0x884fa,
     .vars = 0x880000, .vars_len = 0x10000,
+    // found by comparing RAM in attract, title, character select and fights
+    .attract = 0x8f2da, .in_game = 0x8f326, .picked = 0x8f334, .player_step = 0x68,
 
     // found by changing the difficulty in the game's operator menu (both versions)
     .adj_data = 0x1a00, .adj_len = 512, .adj_difficulty = 0x1a18,

@@ -9,6 +9,9 @@ void training_inputs(uint32_t held[2]);
 // `real` is false for run-ahead frames, which must not advance any counters.
 void training_apply(bool real);
 
+// Training mode for this session only (the home menu's Practice), not saved.
+extern bool training_forced;
+
 void training_record_toggle(void);   // start/stop recording the dummy
 void training_play_toggle(void);
 const char *training_status(void);   // short label for the screen, or NULL
