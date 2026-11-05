@@ -119,6 +119,118 @@ bool home_enabled(void)
 }
 
 /* ---------------------------------------------------------------- */
+/* Stage select: the home version's codes at the character screen    */
+/* ---------------------------------------------------------------- */
+
+// Hold a direction and pick a fighter with one of the buttons. The SNES pad
+// maps to the cabinet as Y X L = quick, medium, fierce punch and B A R =
+// quick, medium, fierce kick. The first player to pick chooses.
+static const struct { int dir, button, stage; const char *name; } stage_codes[] = {
+    { BTN_DOWN, BTN_HQ, 12, "BLOODY ARENA" },
+    { BTN_DOWN, BTN_HF, 5,  "CANYON BRIDGE" },
+    { BTN_UP,   BTN_LF, 6,  "CASTLE ROOF" },
+    { BTN_UP,   BTN_LQ, 7,  "CITY ROOF" },
+    { BTN_DOWN, BTN_LF, 2,  "CITY STREET" },
+    { BTN_UP,   BTN_LM, 8,  "DESERT ROOF" },
+    { BTN_DOWN, BTN_LM, 15, "FACTORY" },
+    { BTN_DOWN, BTN_LQ, 1,  "FIREPLACE" },
+    { BTN_UP,   BTN_HM, 11, "ICE SCULPTURE" },
+    { BTN_UP,   BTN_HF, 3,  "ICE TEMPLE" },
+    { BTN_DOWN, BTN_HM, 20, "LAVA PIT" },
+    { BTN_UP,   BTN_HQ, 13, "SKULL ROOM" },
+};
+#define SKY_ROOFTOP 9           // Down + B on both players' picks
+
+static struct {
+    int want;                   // stage to force, -1 none
+    bool armed;                 // the pool is rewritten until the game draws
+    uint8_t pool[32], last;     // the game's own values, put back afterwards
+    bool was_picked[2];
+    int first_code;             // the first picker's code, -1 none
+} stg = { .want = -1, .first_code = -1 };
+
+static void poke(uint32_t off, uint8_t v)
+{
+    if (ram2[off] == v) return;
+    ram2[off] = v;
+    ram_touch(&ram2[off]);
+}
+
+static void stage_restore(void)
+{
+    if (!stg.armed) return;
+    for (int i = 0; i < 32; i++) poke(game.stage_pool + (uint32_t)i, stg.pool[i]);
+    poke(game.stage_last, stg.want >= 0 ? (uint8_t)stg.want : stg.last);
+    stg.armed = false;
+}
+
+static void stage_clear(void)
+{
+    stage_restore();
+    stg.want = stg.first_code = -1;
+    stg.was_picked[0] = stg.was_picked[1] = false;
+}
+
+// Which code (index into stage_codes, or SKY_ROOFTOP's -2) a pick was made with.
+static int pick_code(uint32_t held)
+{
+    bool down = held >> BTN_DOWN & 1, up = held >> BTN_UP & 1;
+    if (!down && !up) return -1;
+    for (size_t i = 0; i < sizeof stage_codes / sizeof stage_codes[0]; i++)
+        if ((stage_codes[i].dir == BTN_DOWN ? down : up) && held >> stage_codes[i].button & 1) return (int)i;
+    return -1;
+}
+
+// Called every frame of a two-player mode, with the inputs the game gets.
+static void stage_frame(uint32_t held[2])
+{
+    if (!game.stage_pool) return;
+    // the game shows a pick the frame after the press: look at the last few frames
+    static uint32_t hist[2][8];
+    static unsigned at;
+    uint32_t recent[2] = { 0, 0 };
+    at = (at + 1) % 8;
+    for (int p = 0; p < 2; p++) {
+        hist[p][at] = held[p];
+        for (int i = 0; i < 8; i++) recent[p] |= hist[p][i];
+    }
+    // The arcade has stage codes of its own (a direction held on the pick),
+    // mapped differently: the direction stays ours until a fighter is picked.
+    for (int p = 0; p < 2; p++)
+        if (in_game(p) && !picked(p)) held[p] &= ~(1u << BTN_UP | 1u << BTN_DOWN);
+    for (int p = 0; p < 2; p++) {
+        bool now = picked(p);
+        if (now && !stg.was_picked[p]) {
+            int code = pick_code(recent[p]);
+            if (stg.want < 0 && code >= 0 && stg.first_code < 0) {
+                stg.first_code = code;
+                stg.want = stage_codes[code].stage;
+            }
+            // Sky Rooftop: Down + B on both picks
+            bool sky = recent[p] >> BTN_DOWN & 1 && recent[p] >> BTN_LQ & 1;
+            if (p == 1 && sky && stg.was_picked[0] && stg.first_code >= 0 && stage_codes[stg.first_code].stage == 1)
+                stg.want = SKY_ROOFTOP;
+            if (stg.want >= 0) osd_message("Stage: %s", stg.want == SKY_ROOFTOP ? "SKY ROOFTOP" : stage_codes[stg.first_code].name);
+        }
+        stg.was_picked[p] = now;
+    }
+    // From the first pick on: make every draw come out as the chosen stage,
+    // until the game has drawn it (it draws as soon as both have picked).
+    if (stg.want >= 0 && ram2[game.stage] != stg.want) {
+        if (!stg.armed) {
+            memcpy(stg.pool, &ram2[game.stage_pool], 32);
+            stg.last = ram2[game.stage_last];
+            stg.armed = true;
+        }
+        for (int i = 0; i < 32; i++) poke(game.stage_pool + (uint32_t)i, (uint8_t)stg.want);
+        poke(game.stage_last, 0xff);        // its no-repeat check would loop forever
+    } else if (stg.armed && ram2[game.stage] == stg.want) {
+        stage_restore();
+    }
+    if (!picked(0) && !picked(1) && !stg.armed) stg.want = stg.first_code = -1;   // back at the character screen
+}
+
+/* ---------------------------------------------------------------- */
 /* Menu model                                                        */
 /* ---------------------------------------------------------------- */
 
@@ -167,6 +279,7 @@ static void open_page(int page, int sel)
 
 void home_reset(void)
 {
+    stage_clear();
     training_forced = false;
     h.mode = MODE_NONE;
     h.page = PAGE_CLOSED;
@@ -362,6 +475,8 @@ void home_inputs(uint32_t held[2])
             held[0] &= ~moves;
         } else h.route_armed = false;
     }
+
+    if (h.mode == MODE_VS || h.mode == MODE_PRACTICE) stage_frame(held);
 
     // In a fight of one of the menu's modes, Start pauses.
     if (h.mode != MODE_NONE && !h.starting && pressed[0] >> BTN_START & 1 && game_health(0) >= 0) {

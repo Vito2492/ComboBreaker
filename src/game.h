@@ -56,6 +56,9 @@ typedef struct {
     // For the console-style menu (home.c): 1 while the attract loop runs; per
     // player (player_step apart) 1 once in a game and once a fighter is picked.
     uint32_t attract, in_game, picked, player_step;
+    // Stage choice: the game draws two-player stages from stage_pool (32
+    // bytes) at random, never the one in stage_last; the result lands in stage.
+    uint32_t stage_pool, stage_last, stage;
 
     // Operator adjustments on the disk: adj_len bytes at adj_data, the first
     // set once they were edited, with the game's checksum of them at adj_sum.
