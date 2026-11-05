@@ -12,6 +12,7 @@
 #include "training.h"
 #include "menufont_data.h"
 #include <stdio.h>
+#include <time.h>
 #include <string.h>
 
 /* ---------------------------------------------------------------- */
@@ -112,6 +113,9 @@ static bool in_attract(void) { return flag(game.attract) == 1; }
 static bool in_game(int p) { return flag(game.in_game + (uint32_t)p * game.player_step) == 1; }
 static bool picked(int p) { return flag(game.picked + (uint32_t)p * game.player_step) == 1; }
 static bool playing(void) { return in_game(0) || in_game(1); }
+// Past the character screen: everyone in the game has picked a fighter.
+static bool all_picked(void) { return in_game(0) && picked(0) && (!in_game(1) || picked(1)); }
+static bool fighting(void) { return all_picked() && game_health(0) >= 0; }
 
 bool home_enabled(void)
 {
@@ -261,6 +265,35 @@ static struct {
 } h;
 
 /* ---------------------------------------------------------------- */
+/* Random fighter: Up + Start on the character screen                 */
+/* ---------------------------------------------------------------- */
+
+// The cursor is moved a random number of places, then the fighter is
+// picked, all with the player's own inputs.
+static struct { int steps[2], t[2]; uint32_t seed; } rnd;
+static uint32_t rnd_ticks(void) { static uint32_t n; return ++n * 2654435761u ^ (uint32_t)clock(); }
+
+static void random_frame(uint32_t held[2], const uint32_t pressed[2])
+{
+    rnd.seed = rnd.seed * 1103515245u + 12345u + rnd_ticks();
+    for (int p = 0; p < 2; p++) {
+        if (!in_game(p) || picked(p)) { rnd.steps[p] = rnd.t[p] = 0; continue; }
+        if (!rnd.steps[p] && pressed[p] >> BTN_START & 1 && held[p] >> BTN_UP & 1) {
+            rnd.steps[p] = 1 + (int)(rnd.seed >> 16) % 10;
+            rnd.t[p] = 0;
+            osd_message("Player %d: random fighter", p + 1);
+        }
+        if (!rnd.steps[p]) continue;
+        held[p] &= ~(((1u << BTN_START) - 1) | 1u << BTN_START);
+        int t = rnd.t[p]++;
+        int n = rnd.steps[p];
+        if (t < n * 8) { if (t % 8 < 3) held[p] |= 1u << BTN_RIGHT; }       // step along the row
+        else if (t < n * 8 + 4) held[p] |= 1u << BTN_HQ;                   // and pick
+        else rnd.steps[p] = 0;
+    }
+}
+
+/* ---------------------------------------------------------------- */
 /* Speed: held on the VS screen, both players in a two-player game    */
 /* ---------------------------------------------------------------- */
 
@@ -278,7 +311,7 @@ static struct { double speed; bool chosen; int since; } spd = { 1, false, 0 };
 static void speed_frame(const uint32_t held[2])
 {
     // the VS screen: the first seconds after everyone in the game has picked
-    bool all = in_game(0) && picked(0) && (!in_game(1) || picked(1));
+    bool all = all_picked();
     if (!picked(0) && !picked(1)) { spd.speed = 1; spd.chosen = false; spd.since = 0; }   // a new match
     if (!all) return;
     if (spd.since < 100000) spd.since++;
@@ -300,7 +333,7 @@ static void speed_frame(const uint32_t held[2])
 
 double home_speed(void)
 {
-    return home_enabled() && h.mode != MODE_NONE && game_health(0) >= 0 && h.page == PAGE_CLOSED ? spd.speed : 1;
+    return home_enabled() && h.mode != MODE_NONE && fighting() && h.page == PAGE_CLOSED ? spd.speed : 1;
 }
 
 static bool supported(int item)
@@ -521,11 +554,12 @@ void home_inputs(uint32_t held[2])
         } else h.route_armed = false;
     }
 
+    if (h.mode != MODE_PRACTICE) random_frame(held, pressed);
     if (h.mode == MODE_VS || h.mode == MODE_PRACTICE) stage_frame(held);
     if (h.mode != MODE_NONE) speed_frame(held);
 
     // In a fight of one of the menu's modes, Start pauses.
-    if (h.mode != MODE_NONE && !h.starting && pressed[0] >> BTN_START & 1 && game_health(0) >= 0) {
+    if (h.mode != MODE_NONE && !h.starting && pressed[0] >> BTN_START & 1 && fighting()) {
         held[0] &= ~(1u << BTN_START);
         open_page(PAGE_PAUSE, PAUSE_CONTINUE);
     }
