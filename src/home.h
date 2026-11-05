@@ -15,6 +15,9 @@ void home_draw(uint32_t *ov);
 bool home_paused(void);
 // True when the home menu is available for this game and switched on.
 bool home_enabled(void);
+// Game speed chosen with the console codes (1 = the arcade's), for the frontend
+// to run that many frames per frame of a fight.
+double home_speed(void);
 // The machine was reset or a state was loaded: forget any mode in progress.
 void home_reset(void);
 

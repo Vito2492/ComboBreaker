@@ -260,6 +260,49 @@ static struct {
     unsigned anim;              // frames the menu has shown, for its fade-in
 } h;
 
+/* ---------------------------------------------------------------- */
+/* Speed: held on the VS screen, both players in a two-player game    */
+/* ---------------------------------------------------------------- */
+
+#define PUNCHES (1u << BTN_HQ | 1u << BTN_HM | 1u << BTN_HF)     // Y X L
+#define KICKS   (1u << BTN_LQ | 1u << BTN_LM | 1u << BTN_LF)     // B A R
+static const struct { uint32_t dir, buttons; double speed; const char *name; } speed_codes[] = {
+    { 1u << BTN_LEFT,  KICKS,   0.80, "SLOW" },
+    { 1u << BTN_RIGHT, PUNCHES, 1.15, "FAST" },
+    { 1u << BTN_RIGHT, KICKS,   1.30, "FASTER" },
+    { 1u << BTN_LEFT,  PUNCHES, 1.45, "FASTEST" },
+};
+
+static struct { double speed; bool chosen; int since; } spd = { 1, false, 0 };
+
+static void speed_frame(const uint32_t held[2])
+{
+    // the VS screen: the first seconds after everyone in the game has picked
+    bool all = in_game(0) && picked(0) && (!in_game(1) || picked(1));
+    if (!picked(0) && !picked(1)) { spd.speed = 1; spd.chosen = false; spd.since = 0; }   // a new match
+    if (!all) return;
+    if (spd.since < 100000) spd.since++;
+    if (spd.chosen || spd.since > 360) return;
+    for (size_t i = 0; i < sizeof speed_codes / sizeof speed_codes[0]; i++) {
+        bool every = true;
+        for (int p = 0; p < 2; p++) {
+            if (!in_game(p)) continue;
+            uint32_t want = speed_codes[i].dir | speed_codes[i].buttons;
+            if ((held[p] & want) != want) every = false;
+        }
+        if (every) {
+            spd.speed = speed_codes[i].speed;
+            spd.chosen = true;
+            osd_message("Speed: %s", speed_codes[i].name);
+        }
+    }
+}
+
+double home_speed(void)
+{
+    return home_enabled() && h.mode != MODE_NONE && game_health(0) >= 0 && h.page == PAGE_CLOSED ? spd.speed : 1;
+}
+
 static bool supported(int item)
 {
     return item != MAIN_TOURNAMENT;     // the tournament ladder is not built yet
@@ -280,6 +323,8 @@ static void open_page(int page, int sel)
 void home_reset(void)
 {
     stage_clear();
+    spd.speed = 1;
+    spd.chosen = false;
     training_forced = false;
     h.mode = MODE_NONE;
     h.page = PAGE_CLOSED;
@@ -477,6 +522,7 @@ void home_inputs(uint32_t held[2])
     }
 
     if (h.mode == MODE_VS || h.mode == MODE_PRACTICE) stage_frame(held);
+    if (h.mode != MODE_NONE) speed_frame(held);
 
     // In a fight of one of the menu's modes, Start pauses.
     if (h.mode != MODE_NONE && !h.starting && pressed[0] >> BTN_START & 1 && game_health(0) >= 0) {

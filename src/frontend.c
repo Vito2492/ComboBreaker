@@ -26,6 +26,7 @@
 #include "shaders.h"
 #include <SDL2/SDL.h>
 #include <stdio.h>
+#include <math.h>
 #include <string.h>
 #include <time.h>
 #ifdef _WIN32
@@ -54,16 +55,50 @@ static uint64_t frame_count;
 /* Audio                                                            */
 /* ---------------------------------------------------------------- */
 
+// Keep the pitch when the game itself runs faster or slower (the console
+// speed codes): grains overlap-added with a Hann window, read further apart
+// or closer together than they are written.
+#define TS_N 1024
+#define TS_H (TS_N / 2)
+static int time_stretch(const int16_t *in, int n, double speed, int16_t *out, int max)
+{
+    static int16_t fifo[32768];
+    static float ola[TS_N], win[TS_N];
+    static int fill;
+    static double rd;
+    if (!win[TS_H]) for (int i = 0; i < TS_N; i++) win[i] = 0.5f - 0.5f * cosf(6.2831853f * i / TS_N);
+    if (speed == 1) { fill = 0; rd = 0; memset(ola, 0, sizeof ola); return -1; }
+    if (fill + n > (int)(sizeof fifo / 2)) { fill = 0; rd = 0; }
+    memcpy(fifo + fill, in, (size_t)n * 2);
+    fill += n;
+    int m = 0;
+    while ((int)rd + TS_N <= fill && m + TS_H <= max) {
+        int s = (int)rd;
+        for (int i = 0; i < TS_N; i++) ola[i] += fifo[s + i] * win[i];
+        for (int i = 0; i < TS_H; i++) out[m++] = (int16_t)(ola[i] > 32767 ? 32767 : ola[i] < -32768 ? -32768 : ola[i]);
+        memmove(ola, ola + TS_H, TS_H * sizeof ola[0]);
+        memset(ola + TS_H, 0, TS_H * sizeof ola[0]);
+        rd += TS_H * speed;
+    }
+    int used = (int)rd < fill ? (int)rd : fill;
+    memmove(fifo, fifo + used, (size_t)(fill - used) * 2);
+    fill -= used;
+    rd -= used;
+    return m;
+}
+
 // Resample DCS output (usually 31.25 kHz) to the device rate and queue it.
 // `speed` > 1 when the game runs faster than 58.96 Hz: the same audio is
 // played in less time (and slightly higher pitch).
 static void pump_audio(bool discard, double speed)
 {
-    static int16_t in[8192], out[24576];
+    static int16_t in[8192], out[24576], st[16384];
     static double pos;      // fractional read position into the previous+current block
     static int16_t prev;
     int n = sound_fetch(in, 8192);
     if (!adev || discard) return;
+    int sn = time_stretch(in, n, home_speed(), st, 16384);
+    if (sn >= 0) { n = sn < 8192 ? sn : 8192; memcpy(in, st, (size_t)n * 2); }
     double step = sound_rate() / AUDIO_HZ * speed;
     int gain = muted || (!focused && cfg.mute_unfocused) ? 0 : volume * 256 / 100;
     int m = 0;
@@ -1546,6 +1581,12 @@ int frontend_main(void)
             continue;
         }
 
+        // the console speed codes: more (or fewer) game frames per frame shown
+        static double speed_acc;
+        speed_acc += home_speed();
+        if (speed_acc < 1) { present(NULL); if (!vsync) SDL_Delay((uint32_t)(1000 / FRAME_HZ)); continue; }
+        while (speed_acc >= 2) { emulate_frame(); speed_acc -= 1; }
+        speed_acc -= 1;
         emulate_frame();
         int ahead = cfg.run_ahead < 0 ? 0 : cfg.run_ahead > 2 ? 2 : cfg.run_ahead;
         if (vsync) {
