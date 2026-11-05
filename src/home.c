@@ -261,6 +261,7 @@ static struct {
     uint32_t prev[2];           // last frame's buttons, for presses
     int repeat, repeat_dir;     // held up/down auto-repeat
     int cool;                   // frames before Start may be pressed again
+    int rejoin_t, rejoin_next;  // VS: Start presses that bring both players back
     unsigned anim;              // frames the menu has shown, for its fade-in
 } h;
 
@@ -508,6 +509,7 @@ void home_inputs(uint32_t held[2])
     }
 
     uint32_t pressed[2] = { held[0] & ~h.prev[0], held[1] & ~h.prev[1] };
+    const uint32_t held_raw[2] = { held[0], held[1] };
     h.prev[0] = held[0];
     h.prev[1] = held[1];
 
@@ -541,6 +543,23 @@ void home_inputs(uint32_t held[2])
             else h.starting = false;
         }
     }
+    // VS: when a match is over both players go back to the character
+    // screen, as on the console, instead of the arcade's winner-stays-on.
+    // Start is pressed for each in turn: the loser continues, and a player
+    // the game has handed to the CPU joins again.
+    if (h.mode == MODE_VS && !h.starting && h.press == 0 && ++h.rejoin_t >= 30) {
+        h.rejoin_t = 0;
+        bool over = game.match_over && ram2[game.match_over];
+        for (int k = 0; k < 2; k++) {
+            int p = (h.rejoin_next + k) & 1;
+            if ((over && in_game(p) && picked(p)) || (!in_game(p) && in_game(p ^ 1))) {
+                h.press = 4;
+                h.press_player = p;
+                h.rejoin_next = p ^ 1;
+                break;
+            }
+        }
+    }
     if (h.press > 0) { held[h.press_player] |= 1u << BTN_START; h.press--; }
 
     // Practice: player 1 picks both fighters, then the dummy stands still.
@@ -558,10 +577,21 @@ void home_inputs(uint32_t held[2])
     if (h.mode == MODE_VS || h.mode == MODE_PRACTICE) stage_frame(held);
     if (h.mode != MODE_NONE) speed_frame(held);
 
-    // In a fight of one of the menu's modes, Start pauses.
-    if (h.mode != MODE_NONE && !h.starting && pressed[0] >> BTN_START & 1 && fighting()) {
-        held[0] &= ~(1u << BTN_START);
-        open_page(PAGE_PAUSE, PAUSE_CONTINUE);
+    // In one of the menu's modes, Start pauses at any time, as on the
+    // console, except where the game itself wants it: the continue
+    // countdown after a lost match, a second player joining, and Up + Start
+    // (random fighter) on the character screen.
+    if (h.mode != MODE_NONE && !h.starting) {
+        for (int p = 0; p < 2; p++) {
+            if (!(pressed[p] >> BTN_START & 1) || !in_game(p)) continue;
+            if (h.mode == MODE_PRACTICE && p == 1) continue;
+            if (game.match_over && ram2[game.match_over] && picked(p)) continue;   // continue countdown
+            if (!picked(p) && held_raw[p] >> BTN_UP & 1) continue;
+            held[0] &= ~(1u << BTN_START);
+            held[1] &= ~(1u << BTN_START);
+            open_page(PAGE_PAUSE, PAUSE_CONTINUE);
+            break;
+        }
     }
 }
 
