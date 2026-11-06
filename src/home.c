@@ -272,6 +272,9 @@ static struct {
     bool practice_again;        // Practice ended in a KO: back to its character screen
     bool title_wait;            // a Start in the attract loop, held until the sound board is up
     int col;                    // Options > CONTROLS: the player column chosen
+    int idle;                   // frames the main menu has been left alone
+    bool left_menu;             // the menu gave way to the attract loop
+    bool menu_after_title;      // a Start from there: open the menu once the title is up
     unsigned anim;              // frames the menu has shown, for its fade-in
 } h;
 
@@ -427,6 +430,7 @@ static void title_state_path(char *buf, size_t n)
 
 static void open_page(int page, int sel)
 {
+    h.idle = 0;
     h.page = page;
     h.sel = sel;
     h.anim = 0;
@@ -625,6 +629,7 @@ static void return_to_menu(void)
 // The DCS sound board takes a few seconds to start: a Start before that
 // reaches a silent title screen. Measured: frame 100 silent, 300 fine.
 #define SOUND_READY 360
+#define IDLE_ATTRACT (20 * 60)  // frames alone on the main menu before the attract loop rolls
 
 // The game's title screen goes back to the attract loop when its counter
 // runs out; while the menu is open it is kept up, and its music with it.
@@ -666,6 +671,20 @@ void home_inputs(uint32_t held[2])
     // The menu is open: it takes every button, and the game stays on its
     // title screen behind it (pressed again if the title times out).
     if (h.page != PAGE_CLOSED && h.page != PAGE_PAUSE) {
+        // Left alone on the main menu, the game rolls on into its attract
+        // loop (fighter profiles, high scores, its music), as the SNES does;
+        // Start there brings the menu back.
+        if (h.page == PAGE_MAIN && (held[0] | held[1])) h.idle = 0;
+        if (h.page == PAGE_MAIN && ++h.idle > IDLE_ATTRACT && !in_attract() && game.title_timer) {
+            h.idle = 0;
+            h.page = PAGE_CLOSED;
+            h.menu_after_title = false;
+            h.left_menu = true;
+            poke(game.title_timer, 30);
+            poke(game.title_timer + 1, 0);
+            held[0] = held[1] = 0;
+            return;
+        }
         keep_title();
         if (h.cool > 0) h.cool--;
         if (in_attract() && h.press == 0 && h.cool == 0) { h.press = 4; h.press_player = 0; h.cool = 40; }
@@ -699,6 +718,13 @@ void home_inputs(uint32_t held[2])
     // console menu instead of starting a game.
     if (!playing() && !h.starting) {
         if (h.mode != MODE_NONE) home_reset();          // a mode ended in game over
+        if (h.menu_after_title && !in_attract() && h.press == 0) {
+            // back from the attract loop the menu was left for: straight to it
+            h.menu_after_title = false;
+            open_page(PAGE_MAIN, h.main_sel);
+            held[0] = held[1] = 0;
+            return;
+        }
         if (h.title_wait) {
             held[0] = held[1] = 0;
             if (frontend_frames() < SOUND_READY) return;
@@ -707,6 +733,8 @@ void home_inputs(uint32_t held[2])
         } else if ((pressed[0] | pressed[1]) >> BTN_START & 1) {
             held[0] = held[1] = 0;
             if (in_attract()) {
+                h.menu_after_title = h.left_menu;
+                h.left_menu = false;
                 if (frontend_frames() < SOUND_READY) { h.title_wait = true; return; }
                 h.press = 4; h.press_player = 0; h.cool = 40;
             } else {
