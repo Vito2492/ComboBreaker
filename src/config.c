@@ -35,7 +35,8 @@ static const char *const button_names[NBUTTONS] = {
 static const char *const p1_keys[NBUTTONS] = { "A", "S", "D", "Z", "X", "C", "Up", "Down", "Left", "Right", "1", "5" };
 static const char *const p2_keys[NBUTTONS] = { "T", "Y", "U", "G", "H", "B", "I", "K", "J", "L", "2", "6" };
 static const char *const pad_defaults[NBUTTONS] = {
-    "x", "y", "rightshoulder", "a", "b", "righttrigger", "dpup", "dpdown", "dpleft", "dpright", "start", "back",
+    // the SNES pad's layout: L Y X punches, R B A kicks (Xbox names)
+    "leftshoulder", "x", "y", "rightshoulder", "a", "b", "dpup", "dpdown", "dpleft", "dpright", "start", "back",
 };
 static const char *const hotkey_names[NHOTKEYS] = {
     "menu", "pause", "frame_advance", "fast_forward", "rewind", "save_state", "load_state", "next_slot",
@@ -137,6 +138,8 @@ static void build_table(void)
         add("game", "home_menu", T_BOOL, &cfg.home_menu, "yes", "console-style menu on Start: Arcade, VS, Tournament, Practice, Options", 0);
         add("game", "home_random_select", T_BOOL, &cfg.home_random, "no", "console menu Options: fighters are drawn at random", 0);
         add("game", "home_timer", T_BOOL, &cfg.home_timer, "yes", "console menu Options: the fight clock runs", 0);
+        add_str("game", "home_controls_p1", cfg.home_pad[0], "LYXRBA", "console menu Options: player 1's SNES button for weak/medium/fierce punch, weak/medium/fierce kick");
+        add_str("game", "home_controls_p2", cfg.home_pad[1], "LYXRBA", "the same for player 2");
     }
     add("game", "demo_sounds", T_BOOL, &cfg.demo_sounds, "yes", "sound during the attract mode", 0);
     add_str("netplay", "address", cfg.net_address, "", "host to join (name or IP, optionally :port)");

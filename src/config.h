@@ -52,6 +52,7 @@ typedef struct {
     bool training;             // health refill + timer freeze
     bool home_menu;            // console-style menu (Arcade, VS, Practice, Options) on Start
     bool home_random, home_timer;   // its Options: random select, the fight clock
+    char home_pad[2][8];       // its Options > CONTROLS: the SNES button of each move, e.g. "LYXRBA"
     // the board's DIP switches
     bool free_play;
     char version[16];

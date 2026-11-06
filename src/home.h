@@ -25,3 +25,4 @@ void home_reset(void);
 void frontend_open_controls(void);      // the external menu's Controls page
 void frontend_reset_game(void);         // power-cycle, applying DIP switch changes
 void frontend_settings_changed(void);   // write the .ini when the menu closes
+uint64_t frontend_frames(void);         // frames emulated since the machine was powered on

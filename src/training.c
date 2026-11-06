@@ -43,8 +43,11 @@ void training_apply(bool real)
             if (h == hp[p].last) hp[p].still++;
             else { hp[p].last = h; hp[p].still = 0; }
         }
-        // refill once a combo is over; a KO (0) is left to the game
-        if (h && h < HEALTH_MAX && hp[p].still >= REFILL_DELAY) {
+        // refill once a combo is over; a KO (0) is left to the game. In the
+        // home menu's Practice nobody may fall: a long combo is cut short of
+        // a KO, which would end the match and hand the dummy to the CPU
+        bool low = training_forced && h <= HEALTH_MAX / 3;
+        if (h && h < HEALTH_MAX && (hp[p].still >= REFILL_DELAY || low)) {
             poke8(off, HEALTH_MAX);
             if (real) hp[p].last = HEALTH_MAX;
         }
@@ -94,8 +97,9 @@ void training_inputs(uint32_t held[2])
 const char *training_status(void)
 {
     if (mode == DUMMY_RECORD) return "REC DUMMY";
-    if (mode == DUMMY_PLAY) return cfg.training || training_forced ? "TRAINING  DUMMY" : "DUMMY";
-    return cfg.training || training_forced ? "TRAINING" : NULL;
+    // the home menu's Practice is a mode of its own, with no label (as on the SNES)
+    if (mode == DUMMY_PLAY) return cfg.training ? "TRAINING  DUMMY" : "DUMMY";
+    return cfg.training ? "TRAINING" : NULL;
 }
 
 int game_health(int player)

@@ -16,8 +16,12 @@
 #include <time.h>
 #include <string.h>
 
+// The SNES pad's buttons, in the order of the cabinet's six: L Y X are
+// weak, medium, fierce punch and R B A weak, medium, fierce kick.
+static const char pad_letters[] = "LYXRBA";
+
 /* ---------------------------------------------------------------- */
-/* Lettering: anti-aliased Goudy, the arcade's own typeface family   */
+/* Lettering: a blocky pixel face like the SNES menus'               */
 /* ---------------------------------------------------------------- */
 
 enum { F_SMALL, F_BODY, F_BIG };
@@ -62,7 +66,15 @@ static int text_width(int f, const char *s)
     return (w4 + 3) / 4;
 }
 
-static void text_layer(uint32_t *ov, int f, int x, int y, const char *s, uint32_t rgb, int alpha)
+// Each row a little darker than the one above, as the SNES menus shade
+// their letters (bevel = false for shadows).
+static uint32_t row_tint(uint32_t rgb, int r, int h)
+{
+    unsigned k = 256 - (unsigned)(r * 80 / (h > 1 ? h - 1 : 1));
+    return ((rgb >> 16 & 255) * k >> 8) << 16 | ((rgb >> 8 & 255) * k >> 8) << 8 | ((rgb & 255) * k >> 8);
+}
+
+static void text_layer(uint32_t *ov, int f, int x, int y, const char *s, uint32_t rgb, int alpha, bool bevel)
 {
     face_t fc = face(f);
     int pen4 = x * 4;
@@ -76,33 +88,23 @@ static void text_layer(uint32_t *ov, int f, int x, int y, const char *s, uint32_
                 int xx = gx + c;
                 if (xx < 0 || xx >= 320) continue;
                 unsigned a = fc.px[g->off + (uint32_t)r * g->w + (uint32_t)c] * (unsigned)alpha / 255;
-                blend(&ov[yy * 320 + xx], rgb, a);
+                blend(&ov[yy * 320 + xx], bevel ? row_tint(rgb, r, fc.h) : rgb, a);
             }
         }
         pen4 += g->adv4;
     }
 }
 
-// Text with a soft dark shadow under it, as the arcade sets its lettering
-// against busy backgrounds.
+// Text with a hard dark shadow, legible over the title's busy art.
 static void text(uint32_t *ov, int f, int x, int y, const char *s, uint32_t rgb, int alpha)
 {
-    text_layer(ov, f, x + 1, y + 1, s, 0x000000, alpha * 3 / 4);
-    text_layer(ov, f, x, y, s, rgb, alpha);
+    text_layer(ov, f, x + 1, y + 1, s, 0x000000, alpha, false);
+    text_layer(ov, f, x, y, s, rgb, alpha, true);
 }
 
 static void text_c(uint32_t *ov, int f, int y, const char *s, uint32_t rgb, int alpha)
 {
     text(ov, f, (320 - text_width(f, s)) / 2, y, s, rgb, alpha);
-}
-
-// Darken a band of the screen, fading in at its top edge.
-static void shade(uint32_t *ov, int y0, int y1, int fade, unsigned a)
-{
-    for (int y = y0 < 0 ? 0 : y0; y < y1 && y < 240; y++) {
-        unsigned k = y - y0 < fade ? a * (unsigned)(y - y0) / (unsigned)fade : a;
-        for (int x = 0; x < 320; x++) blend(&ov[y * 320 + x], 0x000000, k);
-    }
 }
 
 /* ---------------------------------------------------------------- */
@@ -245,7 +247,8 @@ static void stage_frame(uint32_t held[2])
 enum { MODE_NONE, MODE_ARCADE, MODE_VS, MODE_TOURNAMENT, MODE_PRACTICE };
 enum { PAGE_CLOSED, PAGE_MAIN, PAGE_OPTIONS, PAGE_PAUSE, PAGE_ROSTER, PAGE_NEXT };
 enum { MAIN_ARCADE, MAIN_VS, MAIN_TOURNAMENT, MAIN_PRACTICE, MAIN_OPTIONS, MAIN_COUNT };
-enum { OPT_DIFFICULTY, OPT_RANDOM, OPT_TIMER, OPT_BLOOD, OPT_FINISH, OPT_CONTROLS, OPT_EXIT, OPT_COUNT };
+enum { OPT_DIFFICULTY, OPT_RANDOM, OPT_TIMER, OPT_BLOOD, OPT_FINISH,
+       OPT_WP, OPT_MP, OPT_FP, OPT_WK, OPT_MK, OPT_FK, OPT_RESET, OPT_EXIT, OPT_COUNT };
 enum { PAUSE_CONTINUE, PAUSE_MENU, PAUSE_COUNT };
 
 // as on the SNES title screen
@@ -266,6 +269,9 @@ static struct {
     int repeat, repeat_dir;     // held up/down auto-repeat
     int cool;                   // frames before Start may be pressed again
     int rejoin_t, rejoin_next;  // VS: Start presses that bring both players back
+    bool practice_again;        // Practice ended in a KO: back to its character screen
+    bool title_wait;            // a Start in the attract loop, held until the sound board is up
+    int col;                    // Options > CONTROLS: the player column chosen
     unsigned anim;              // frames the menu has shown, for its fade-in
 } h;
 
@@ -458,7 +464,13 @@ static void change_option(int dir)
     case OPT_TIMER: cfg.home_timer = !cfg.home_timer; break;
     case OPT_BLOOD: cfg.blood = ((cfg.blood + d) % 4 + 4) % 4; h.switches_changed = true; break;
     case OPT_FINISH: cfg.finishing_moves = !cfg.finishing_moves; h.switches_changed = true; break;
-    case OPT_CONTROLS: if (!dir) frontend_open_controls(); return;
+    case OPT_WP: case OPT_MP: case OPT_FP: case OPT_WK: case OPT_MK: case OPT_FK:
+        if (dir) h.col = dir < 0 ? 0 : 1;
+        return;
+    case OPT_RESET:
+        if (dir) { h.col = dir < 0 ? 0 : 1; return; }
+        snprintf(cfg.home_pad[h.col], sizeof cfg.home_pad[h.col], "%s", pad_letters);
+        break;
     case OPT_EXIT:
         if (dir) return;
         if (h.switches_changed) {
@@ -565,6 +577,16 @@ static void menu_frame(const uint32_t held[2])
     if (h.page == PAGE_MAIN) {
         if (ok) choose(h.sel);
     } else if (h.page == PAGE_OPTIONS) {
+        if (h.sel >= OPT_WP && h.sel <= OPT_FK && (pr & 0x3fu)) {
+            // the button pressed is the one this move now uses; the move
+            // that had it takes this one's old button
+            int slot = __builtin_ctz(pr & 0x3fu), move = h.sel - OPT_WP;
+            char *pad = cfg.home_pad[h.col], want = pad_letters[slot];
+            for (int a = 0; a < 6; a++) if (pad[a] == want) pad[a] = pad[move];
+            pad[move] = want;
+            frontend_settings_changed();
+            return;
+        }
         if (lr) change_option(lr);
         else if (ok) change_option(0);
         else if (back) { h.sel = OPT_EXIT; change_option(0); }
@@ -591,12 +613,48 @@ static void return_to_menu(void)
     if (h.title_saved && state_load_file(path)) {
         memset(h.prev, 0xff, sizeof h.prev);        // the button that chose this is still down
         if (next) open_page(PAGE_NEXT, 0);
+        else if (h.practice_again) { h.practice_again = false; start_mode(MODE_PRACTICE); }
         else open_page(PAGE_MAIN, was == MODE_VS ? MAIN_VS : was == MODE_PRACTICE ? MAIN_PRACTICE : was == MODE_TOURNAMENT ? MAIN_TOURNAMENT : MAIN_ARCADE);
         return;
     }
     h.title_saved = false;
     frontend_reset_game();
     h.seq_wait = -1;
+}
+
+// The DCS sound board takes a few seconds to start: a Start before that
+// reaches a silent title screen. Measured: frame 100 silent, 300 fine.
+#define SOUND_READY 360
+
+// The game's title screen goes back to the attract loop when its counter
+// runs out; while the menu is open it is kept up, and its music with it.
+static void keep_title(void)
+{
+    if (!game.title_timer || in_attract() || playing()) return;
+    unsigned t = ram2[game.title_timer] | ram2[game.title_timer + 1] << 8;
+    if (t < 300) { poke(game.title_timer, 500 & 255); poke(game.title_timer + 1, 500 >> 8); }
+}
+
+// Options > CONTROLS: which SNES button does each move. The letters are
+// the SNES pad's places, which the cabinet's buttons sit in by default
+// (L Y X punches, R B A kicks), so a remap is a shuffle of the six.
+static int letter_slot(char c)
+{
+    const char *p = strchr(pad_letters, c);
+    return p && c ? (int)(p - pad_letters) : -1;
+}
+
+static void remap(uint32_t held[2])
+{
+    for (int p = 0; p < 2; p++) {
+        uint32_t in = held[p], out = in & ~0x3fu;
+        for (int a = 0; a < 6; a++) {
+            int slot = letter_slot(cfg.home_pad[p][a]);
+            if (slot < 0) slot = a;
+            if (in >> slot & 1) out |= 1u << a;
+        }
+        held[p] = out;
+    }
 }
 
 void home_inputs(uint32_t held[2])
@@ -608,6 +666,7 @@ void home_inputs(uint32_t held[2])
     // The menu is open: it takes every button, and the game stays on its
     // title screen behind it (pressed again if the title times out).
     if (h.page != PAGE_CLOSED && h.page != PAGE_PAUSE) {
+        keep_title();
         if (h.cool > 0) h.cool--;
         if (in_attract() && h.press == 0 && h.cool == 0) { h.press = 4; h.press_player = 0; h.cool = 40; }
         menu_frame(held);
@@ -621,6 +680,7 @@ void home_inputs(uint32_t held[2])
         return;
     }
 
+    if (h.mode != MODE_NONE) remap(held);
     uint32_t pressed[2] = { held[0] & ~h.prev[0], held[1] & ~h.prev[1] };
     const uint32_t held_raw[2] = { held[0], held[1] };
     h.prev[0] = held[0];
@@ -628,20 +688,32 @@ void home_inputs(uint32_t held[2])
 
     // After a reset from Options: open the menu once the attract loop runs.
     if (h.seq_wait < 0) {
-        if (in_attract()) { h.seq_wait = 0; h.press = 4; h.press_player = 0; h.cool = 40; open_page(PAGE_MAIN, MAIN_OPTIONS); }
+        if (in_attract() && frontend_frames() >= SOUND_READY) { h.seq_wait = 0; h.press = 4; h.press_player = 0; h.cool = 40; open_page(PAGE_MAIN, MAIN_OPTIONS); }
         held[0] = held[1] = 0;
         return;
     }
 
-    // Nobody playing: a Start press opens the menu instead of starting.
+    // Nobody playing. Start in the attract loop goes on to the arcade's own
+    // title screen, as on the cabinet (held back until the sound board has
+    // started, or the title's music is lost); Start on the title opens the
+    // console menu instead of starting a game.
     if (!playing() && !h.starting) {
         if (h.mode != MODE_NONE) home_reset();          // a mode ended in game over
-        if ((pressed[0] | pressed[1]) >> BTN_START & 1) {
+        if (h.title_wait) {
             held[0] = held[1] = 0;
-            if (in_attract()) { h.press = 4; h.press_player = 0; h.cool = 40; }   // on to the title screen
-            open_page(PAGE_MAIN, h.main_sel);
-            h.prev[0] = h.prev[1] = 0xffffffffu;        // ignore the Start still held
-            return;
+            if (frontend_frames() < SOUND_READY) return;
+            h.title_wait = false;
+            h.press = 4; h.press_player = 0; h.cool = 40;
+        } else if ((pressed[0] | pressed[1]) >> BTN_START & 1) {
+            held[0] = held[1] = 0;
+            if (in_attract()) {
+                if (frontend_frames() < SOUND_READY) { h.title_wait = true; return; }
+                h.press = 4; h.press_player = 0; h.cool = 40;
+            } else {
+                open_page(PAGE_MAIN, h.main_sel);
+                h.prev[0] = h.prev[1] = 0xffffffffu;    // ignore the Start still held
+                return;
+            }
         }
     }
 
@@ -656,6 +728,13 @@ void home_inputs(uint32_t held[2])
             else h.starting = false;
         }
     }
+    // Practice: if a match ends after all, start the practice over rather
+    // than let the arcade go on with the CPU.
+    if (h.mode == MODE_PRACTICE && !h.starting && game.match_over && ram2[game.match_over] && picked(0)) {
+        h.practice_again = true;
+        h.restore = true;
+    }
+
     // VS: when a match is over both players go back to the character
     // screen, as on the console, instead of the arcade's winner-stays-on.
     // Start is pressed for each in turn: the loser continues, and a player
@@ -727,116 +806,146 @@ static void maybe_save_title(void)
 #define C_SEL    0xffd23cu      // its yellow for the chosen line
 #define C_DIM    0x707884u
 #define C_VALUE  0x9fe8ffu      // the cyan of the arcade's credits text
-#define C_HELP   0x7ee07eu      // the SNES screens' green help lines
+#define C_HELP   0x58e058u      // the SNES screens' green labels
 #define C_GOLD   0xf0c040u
 
 static int fade_in(void) { return h.anim < 12 ? (int)h.anim * 255 / 12 : 255; }
 
+// On the arcade's own title screen, under its logo and above its
+// FREE PLAY / INSERT COIN line, as the SNES menu sits on its title.
 static void draw_main(uint32_t *ov)
 {
-    shade(ov, 120, 240, 40, 252);           // covers the title's own "FREE PLAY"
     for (int i = 0; i < MAIN_COUNT; i++)
-        text_c(ov, F_BODY, 150 + i * 14, main_items[i], i == h.sel ? C_SEL : C_ITEM, fade_in());
+        text_c(ov, F_BODY, 140 + i * 13, main_items[i], i == h.sel ? C_SEL : C_ITEM, fade_in());
 }
 
-// A row of five marks for the arcade's five CPU levels, like the SNES stars.
+// Five stars for the arcade's five CPU levels, as on the SNES.
 static void stars(uint32_t *ov, int x, int y, int level, int alpha)
 {
+    static const char *const star[7] = { "   #   ", "  ###  ", "#######", " ##### ", "  ###  ", " ## ## ", "##   ##" };
     for (int i = 0; i < 5; i++) {
-        uint32_t c = i < level ? C_SEL : 0x505860u;
-        for (int dy = -3; dy <= 3; dy++)
-            for (int dx = -3; dx <= 3; dx++)
-                if (abs(dx) + abs(dy) <= 3) blend(&ov[(y + dy) * 320 + x + i * 10 + dx], c, (unsigned)alpha);
+        uint32_t c = i < level ? C_SEL : 0x606870u;
+        for (int r = 0; r < 7; r++)
+            for (int k = 0; k < 7; k++)
+                if (star[r][k] == '#') {
+                    blend(&ov[(y + r + 1) * 320 + x + i * 9 + k + 1], 0x000000, (unsigned)alpha);
+                    blend(&ov[(y + r) * 320 + x + i * 9 + k], row_tint(c, r, 7), (unsigned)alpha);
+                }
     }
+}
+
+// A dim, even veil, so the title shows through as the SNES screens' K does.
+static void veil(uint32_t *ov, unsigned a)
+{
+    for (int i = 0; i < 320 * 240; i++) blend(&ov[i], 0x100818u, a);
 }
 
 static void draw_options(uint32_t *ov)
 {
-    shade(ov, 0, 240, 1, 245);
+    veil(ov, 225);
     int a = fade_in();
-    text_c(ov, F_BIG, 16, "OPTIONS", C_ITEM, a);
+    text_c(ov, F_BIG, 8, "OPTIONS", C_ITEM, a);
     int dl = adjust_difficulty();
-    char line[OPT_COUNT][48];
-    snprintf(line[OPT_DIFFICULTY], 48, "DIFFICULTY:  EASY");
-    snprintf(line[OPT_RANDOM], 48, "RANDOM SELECT:  %s", cfg.home_random ? "ON" : "OFF");
-    snprintf(line[OPT_TIMER], 48, "TIMER:  %s", cfg.home_timer ? "ON" : "OFF");
-    snprintf(line[OPT_BLOOD], 48, "BLOOD:  %s", blood_names[cfg.blood & 3]);
-    snprintf(line[OPT_FINISH], 48, "FINISHING MOVES:  %s", cfg.finishing_moves ? "ON" : "OFF");
-    snprintf(line[OPT_CONTROLS], 48, "CONTROLS");
-    snprintf(line[OPT_EXIT], 48, "EXIT");
-    for (int i = 0; i < OPT_COUNT; i++) {
-        int y = 52 + i * 19 + (i >= OPT_CONTROLS ? 10 : 0);
+    char line[48];
+    for (int i = OPT_DIFFICULTY; i <= OPT_FINISH; i++) {
+        int y = 34 + i * 14;
         uint32_t c = i == h.sel ? C_SEL : C_ITEM;
-        text(ov, F_BODY, 40, y, line[i], c, a);
-        if (i == OPT_DIFFICULTY) {
-            int x = 40 + text_width(F_BODY, line[i]) + 10;
-            stars(ov, x + 3, y + 9, dl < 1 || dl > 5 ? 0 : dl, a);
-            text(ov, F_BODY, x + 52, y, "HARD", c, a);
+        switch (i) {
+        case OPT_DIFFICULTY:
+            text(ov, F_BODY, 20, y, "DIFFICULTY: EASY", c, a);
+            stars(ov, 186, y + 1, dl < 1 || dl > 5 ? 0 : dl, a);
+            text(ov, F_BODY, 236, y, "HARD", c, a);
+            continue;
+        case OPT_RANDOM: snprintf(line, sizeof line, "RANDOM SELECT: %s", cfg.home_random ? "ON" : "OFF"); break;
+        case OPT_TIMER: snprintf(line, sizeof line, "TIMER: %s", cfg.home_timer ? "ON" : "OFF"); break;
+        case OPT_BLOOD: snprintf(line, sizeof line, "BLOOD: %s", blood_names[cfg.blood & 3]); break;
+        default: snprintf(line, sizeof line, "FINISHING MOVES: %s", cfg.finishing_moves ? "ON" : "OFF"); break;
+        }
+        text(ov, F_BODY, 20, y, line, c, a);
+    }
+    // the controls table: the move, then each player's SNES button
+    static const char *const moves[6] = { "WEAK PUNCH:", "MEDIUM PUNCH:", "FIERCE PUNCH:", "WEAK KICK:", "MEDIUM KICK:", "FIERCE KICK:" };
+    text(ov, F_BODY, 20, 108, "CONTROLS:", C_ITEM, a);
+    text(ov, F_BODY, 222, 108, "P1", C_ITEM, a);
+    text(ov, F_BODY, 272, 108, "P2", C_ITEM, a);
+    bool blink = (h.anim / 12) % 2 == 0;
+    for (int m = 0; m < 6; m++) {
+        int y = 122 + m * 12, row = OPT_WP + m;
+        text(ov, F_BODY, 206 - text_width(F_BODY, moves[m]), y, moves[m], row == h.sel ? C_SEL : C_HELP, a);
+        for (int p = 0; p < 2; p++) {
+            char l[2] = { cfg.home_pad[p][m] ? cfg.home_pad[p][m] : pad_letters[m], 0 };
+            bool on = row == h.sel && p == h.col;
+            if (on && !blink) continue;
+            text(ov, F_BODY, 227 + p * 50, y, l, on ? C_ITEM : C_SEL, a);
         }
     }
-    text_c(ov, F_SMALL, 200, "LEFT/RIGHT: CHANGE", C_HELP, a);
-    if (h.switches_changed)
-        text_c(ov, F_SMALL, 214, "THE GAME RESTARTS ON EXIT TO APPLY THESE", C_DIM, a);
+    for (int p = 0; p < 2; p++)
+        text(ov, F_SMALL, 207 + p * 50, 196, "RESET", h.sel == OPT_RESET && p == h.col ? C_SEL : C_ITEM, a);
+    text(ov, F_BODY, 20, 196, "EXIT", h.sel == OPT_EXIT ? C_SEL : C_ITEM, a);
+    const char *help = h.sel >= OPT_WP && h.sel <= OPT_FK ? "PRESS A BUTTON   LEFT/RIGHT: P1/P2"
+                     : h.switches_changed ? "RESTARTS ON EXIT TO APPLY" : "LEFT/RIGHT: CHANGE";
+    text_c(ov, F_SMALL, 222, help, C_DIM, a);
 }
 
 static void draw_roster(uint32_t *ov)
 {
-    shade(ov, 0, 240, 1, 248);
+    veil(ov, 225);
     int a = fade_in();
     text_c(ov, F_BIG, 8, "TOURNAMENT", C_ITEM, a);
-    text(ov, F_SMALL, 232, 32, "W  /  L", C_ITEM, a);
+    text(ov, F_SMALL, 222, 30, "W  /  L", C_ITEM, a);
     for (int i = 0; i < TN_MAX; i++) {
-        int y = 44 + i * 15;
+        int y = 42 + i * 14;
         uint32_t c = i == tn.row ? C_SEL : C_ITEM;
         char b[24];
         snprintf(b, sizeof b, "PLAYER %d:", i + 1);
-        text(ov, F_BODY, 46, y, b, c, a);
-        text(ov, F_BODY, 140, y, tn.name[i], c, a);
+        text(ov, F_BODY, 24, y, b, c, a);
+        text(ov, F_BODY, 130, y, tn.name[i], c, a);
         if (i == tn.row && strlen(tn.name[i]) < 3 && (h.anim / 16) % 2 == 0) {
             char l[2] = { (char)('A' + tn.letter), 0 };
-            text(ov, F_BODY, 140 + text_width(F_BODY, tn.name[i]) + 2, y, l, C_VALUE, a);
+            text(ov, F_BODY, 130 + text_width(F_BODY, tn.name[i]), y, l, C_VALUE, a);
         }
-        snprintf(b, sizeof b, "%02d  %02d", tn.w[i] % 100, tn.l[i] % 100);
-        text(ov, F_BODY, 232, y, b, c, a);
+        snprintf(b, sizeof b, "%02d %02d", tn.w[i] % 100, tn.l[i] % 100);
+        text(ov, F_BODY, 222, y, b, c, a);
     }
-    text_c(ov, F_SMALL, 172, "START: FIGHT      X: DELETE PLAYER", C_HELP, a);
-    text_c(ov, F_SMALL, 186, "A,B: ENTER      Y: DELETE NAME", C_HELP, a);
-    text_c(ov, F_SMALL, 200, "LEFT/RIGHT: LETTER      R: EXIT", C_HELP, a);
+    text_c(ov, F_SMALL, 168, "START: FIGHT    X: DELETE PLAYER", C_HELP, a);
+    text_c(ov, F_SMALL, 182, "A,B: ENTER    Y: DELETE NAME", C_HELP, a);
+    text_c(ov, F_SMALL, 196, "LEFT/RIGHT: LETTER    R: EXIT", C_HELP, a);
 }
 
 static void draw_next(uint32_t *ov)
 {
-    shade(ov, 0, 240, 1, 248);
+    veil(ov, 225);
     int a = fade_in();
     text_c(ov, F_BIG, 14, "NEXT FIGHT", C_GOLD, a);
     if (tn.qn < 2) return;
     for (int side = 0; side < 2; side++) {
-        int who = tn.queue[side], cx = side ? 236 : 84;
+        int who = tn.queue[side], cx = side ? 240 : 80;
         char b[16];
         const char *nm = tn.name[who];
-        text(ov, F_BIG, cx - text_width(F_BIG, nm) / 2, 62, nm, C_ITEM, a);
+        text(ov, F_BIG, cx - text_width(F_BIG, nm) / 2, 60, nm, C_ITEM, a);
         snprintf(b, sizeof b, "%02d/%02d", tn.w[who] % 100, tn.l[who] % 100);
-        text(ov, F_BODY, cx - text_width(F_BODY, b) / 2, 90, b, C_GOLD, a);
-        text(ov, F_SMALL, cx - text_width(F_SMALL, side ? "PLAYER 2" : "PLAYER 1") / 2, 108, side ? "PLAYER 2" : "PLAYER 1", C_DIM, a);
+        text(ov, F_BODY, cx - text_width(F_BODY, b) / 2, 86, b, C_GOLD, a);
+        const char *pl = side ? "PLAYER 2" : "PLAYER 1";
+        text(ov, F_SMALL, cx - text_width(F_SMALL, pl) / 2, 104, pl, C_DIM, a);
     }
-    text_c(ov, F_BIG, 72, "VS", C_GOLD, a);
-    if ((h.anim / 24) % 2 == 0) text_c(ov, F_BODY, 134, "PRESS START", C_ITEM, a);
+    text_c(ov, F_BIG, 64, "VS", C_GOLD, a);
+    if ((h.anim / 24) % 2 == 0) text_c(ov, F_BODY, 132, "PRESS START", C_ITEM, a);
     // the line of players waiting, in two columns as on the SNES
     for (int k = 2; k < tn.qn; k++) {
         int i = tn.queue[k], col = (k - 2) / 3, row = (k - 2) % 3;
         char b[40];
         snprintf(b, sizeof b, "%d: %-3s %02d/%02d", i + 1, tn.name[i], tn.w[i] % 100, tn.l[i] % 100);
-        text(ov, F_SMALL, col ? 178 : 30, 170 + row * 14, b, C_ITEM, a);
+        text(ov, F_SMALL, col ? 176 : 24, 170 + row * 14, b, C_ITEM, a);
     }
 }
 
 static void draw_pause(uint32_t *ov)
 {
-    shade(ov, 80, 160, 1, 170);
+    veil(ov, 150);
     static const char *const items[PAUSE_COUNT] = { "CONTINUE", "MAIN MENU" };
-    text_c(ov, F_BIG, 86, "PAUSE", C_ITEM, 255);
+    text_c(ov, F_BIG, 90, "PAUSE", C_ITEM, 255);
     for (int i = 0; i < PAUSE_COUNT; i++)
-        text_c(ov, F_BODY, 116 + i * 18, items[i], i == h.sel ? C_SEL : C_ITEM, fade_in());
+        text_c(ov, F_BODY, 120 + i * 16, items[i], i == h.sel ? C_SEL : C_ITEM, fade_in());
 }
 
 void home_draw(uint32_t *ov)

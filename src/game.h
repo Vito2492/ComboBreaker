@@ -59,6 +59,7 @@ typedef struct {
     // Stage choice: the game draws two-player stages from stage_pool (32
     // bytes) at random, never the one in stage_last; the result lands in stage.
     uint32_t stage_pool, stage_last, stage;
+    uint32_t title_timer;       // 16 bits: frames until the title screen gives way to the attract loop
     uint32_t wins;              // per player (player_step apart): matches won, for the tournament
     uint32_t match_over;        // non-zero from a lost match through the continue countdown
 

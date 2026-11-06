@@ -873,6 +873,7 @@ static void go(int page, int sel) { menu_page = page; menu_sel = sel; capturing 
 void frontend_open_controls(void) { menu_open = true; go(PG_CONTROLS, 0); stop_audio(); }
 void frontend_reset_game(void) { hard_reset(); }
 void frontend_settings_changed(void) { menu_changed = true; }
+uint64_t frontend_frames(void) { return frame_count; }
 
 static void start_join(void)
 {
