@@ -119,7 +119,9 @@ static bool fighting(void) { return all_picked() && game_health(0) >= 0; }
 
 bool home_enabled(void)
 {
-    return cfg.home_menu && game.attract && game.in_game && game.picked;
+    // the RAM locations were found in the default version (L1.5D for
+    // UltraCombo); a ROM given by path is taken to be that one
+    return cfg.home_menu && game.attract && game.in_game && game.picked && machine_version() <= 0;
 }
 
 /* ---------------------------------------------------------------- */
