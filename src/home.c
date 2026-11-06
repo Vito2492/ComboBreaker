@@ -12,6 +12,7 @@
 #include "training.h"
 #include "menufont_data.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 #include <string.h>
 
@@ -128,24 +129,25 @@ bool home_enabled(void)
 /* Stage select: the home version's codes at the character screen    */
 /* ---------------------------------------------------------------- */
 
-// Hold a direction and pick a fighter with one of the buttons. The SNES pad
-// maps to the cabinet as Y X L = quick, medium, fierce punch and B A R =
-// quick, medium, fierce kick. The first player to pick chooses.
+// Hold a direction and pick a fighter with one of the buttons. The SNES
+// pad's default layout is L Y X = weak, medium, fierce punch and R B A =
+// weak, medium, fierce kick (its Options screen); those are the cabinet's
+// quick/medium/fierce buttons. The first player to pick chooses.
 static const struct { int dir, button, stage; const char *name; } stage_codes[] = {
-    { BTN_DOWN, BTN_HQ, 12, "BLOODY ARENA" },
-    { BTN_DOWN, BTN_HF, 5,  "CANYON BRIDGE" },
-    { BTN_UP,   BTN_LF, 6,  "CASTLE ROOF" },
-    { BTN_UP,   BTN_LQ, 7,  "CITY ROOF" },
-    { BTN_DOWN, BTN_LF, 2,  "CITY STREET" },
-    { BTN_UP,   BTN_LM, 8,  "DESERT ROOF" },
-    { BTN_DOWN, BTN_LM, 15, "FACTORY" },
-    { BTN_DOWN, BTN_LQ, 1,  "FIREPLACE" },
-    { BTN_UP,   BTN_HM, 11, "ICE SCULPTURE" },
-    { BTN_UP,   BTN_HF, 3,  "ICE TEMPLE" },
-    { BTN_DOWN, BTN_HM, 20, "LAVA PIT" },
-    { BTN_UP,   BTN_HQ, 13, "SKULL ROOM" },
+    { BTN_DOWN, BTN_HM, 12, "BLOODY ARENA" },       // Down + Y
+    { BTN_DOWN, BTN_HQ, 5,  "CANYON BRIDGE" },      // Down + L
+    { BTN_UP,   BTN_LQ, 6,  "CASTLE ROOF" },        // Up + R
+    { BTN_UP,   BTN_LM, 7,  "CITY ROOF" },          // Up + B
+    { BTN_DOWN, BTN_LQ, 2,  "CITY STREET" },        // Down + R
+    { BTN_UP,   BTN_LF, 8,  "DESERT ROOF" },        // Up + A
+    { BTN_DOWN, BTN_LF, 15, "FACTORY" },            // Down + A
+    { BTN_DOWN, BTN_LM, 1,  "FIREPLACE" },          // Down + B
+    { BTN_UP,   BTN_HF, 11, "ICE SCULPTURE" },      // Up + X
+    { BTN_UP,   BTN_HQ, 3,  "ICE TEMPLE" },         // Up + L
+    { BTN_DOWN, BTN_HF, 20, "LAVA PIT" },           // Down + X
+    { BTN_UP,   BTN_HM, 13, "SKULL ROOM" },         // Up + Y
 };
-#define SKY_ROOFTOP 9           // Down + B on both players' picks
+#define SKY_ROOFTOP 9           // Down + B (medium kick) on both players' picks
 
 static struct {
     int want;                   // stage to force, -1 none
@@ -213,7 +215,7 @@ static void stage_frame(uint32_t held[2])
                 stg.want = stage_codes[code].stage;
             }
             // Sky Rooftop: Down + B on both picks
-            bool sky = recent[p] >> BTN_DOWN & 1 && recent[p] >> BTN_LQ & 1;
+            bool sky = recent[p] >> BTN_DOWN & 1 && recent[p] >> BTN_LM & 1;
             if (p == 1 && sky && stg.was_picked[0] && stg.first_code >= 0 && stage_codes[stg.first_code].stage == 1)
                 stg.want = SKY_ROOFTOP;
             if (stg.want >= 0) osd_message("Stage: %s", stg.want == SKY_ROOFTOP ? "SKY ROOFTOP" : stage_codes[stg.first_code].name);
@@ -241,13 +243,13 @@ static void stage_frame(uint32_t held[2])
 /* ---------------------------------------------------------------- */
 
 enum { MODE_NONE, MODE_ARCADE, MODE_VS, MODE_TOURNAMENT, MODE_PRACTICE };
-enum { PAGE_CLOSED, PAGE_MAIN, PAGE_OPTIONS, PAGE_PAUSE };
+enum { PAGE_CLOSED, PAGE_MAIN, PAGE_OPTIONS, PAGE_PAUSE, PAGE_ROSTER, PAGE_NEXT };
 enum { MAIN_ARCADE, MAIN_VS, MAIN_TOURNAMENT, MAIN_PRACTICE, MAIN_OPTIONS, MAIN_COUNT };
-enum { OPT_DIFFICULTY, OPT_BLOOD, OPT_BLOODCOL, OPT_FINISH, OPT_CONTROLS, OPT_EXIT, OPT_COUNT };
+enum { OPT_DIFFICULTY, OPT_RANDOM, OPT_TIMER, OPT_BLOOD, OPT_FINISH, OPT_CONTROLS, OPT_EXIT, OPT_COUNT };
 enum { PAUSE_CONTINUE, PAUSE_MENU, PAUSE_COUNT };
 
-static const char *const main_items[MAIN_COUNT] = { "ARCADE", "VS", "TOURNAMENT", "PRACTICE", "OPTIONS" };
-static const char *const diff_names[] = { "?", "EXTRA EASY", "EASY", "MEDIUM", "HARD", "EXTRA HARD" };
+// as on the SNES title screen
+static const char *const main_items[MAIN_COUNT] = { "1 PLAYER GAME", "2 PLAYER GAME", "TOURNAMENT GAME", "PRACTICE GAME", "OPTIONS" };
 static const char *const blood_names[] = { "OFF", "LOW", "MEDIUM", "HIGH" };
 
 static struct {
@@ -273,15 +275,17 @@ static struct {
 
 // The cursor is moved a random number of places, then the fighter is
 // picked, all with the player's own inputs.
-static struct { int steps[2], t[2]; uint32_t seed; } rnd;
+static struct { int steps[2], t[2], wait[2]; uint32_t seed; } rnd;
 static uint32_t rnd_ticks(void) { static uint32_t n; return ++n * 2654435761u ^ (uint32_t)clock(); }
 
 static void random_frame(uint32_t held[2], const uint32_t pressed[2])
 {
     rnd.seed = rnd.seed * 1103515245u + 12345u + rnd_ticks();
     for (int p = 0; p < 2; p++) {
-        if (!in_game(p) || picked(p)) { rnd.steps[p] = rnd.t[p] = 0; continue; }
-        if (!rnd.steps[p] && pressed[p] >> BTN_START & 1 && held[p] >> BTN_UP & 1) {
+        if (!in_game(p) || picked(p)) { rnd.steps[p] = rnd.t[p] = rnd.wait[p] = 0; continue; }
+        // Options > RANDOM SELECT: every human player's fighter is drawn
+        bool always = cfg.home_random && ++rnd.wait[p] == 45;
+        if (!rnd.steps[p] && (always || (pressed[p] >> BTN_START & 1 && held[p] >> BTN_UP & 1))) {
             rnd.steps[p] = 1 + (int)(rnd.seed >> 16) % 10;
             rnd.t[p] = 0;
             osd_message("Player %d: random fighter", p + 1);
@@ -300,8 +304,8 @@ static void random_frame(uint32_t held[2], const uint32_t pressed[2])
 /* Speed: held on the VS screen, both players in a two-player game    */
 /* ---------------------------------------------------------------- */
 
-#define PUNCHES (1u << BTN_HQ | 1u << BTN_HM | 1u << BTN_HF)     // Y X L
-#define KICKS   (1u << BTN_LQ | 1u << BTN_LM | 1u << BTN_LF)     // B A R
+#define PUNCHES (1u << BTN_HQ | 1u << BTN_HM | 1u << BTN_HF)     // L Y X
+#define KICKS   (1u << BTN_LQ | 1u << BTN_LM | 1u << BTN_LF)     // R B A
 static const struct { uint32_t dir, buttons; double speed; const char *name; } speed_codes[] = {
     { 1u << BTN_LEFT,  KICKS,   0.80, "SLOW" },
     { 1u << BTN_RIGHT, PUNCHES, 1.15, "FAST" },
@@ -339,10 +343,76 @@ double home_speed(void)
     return home_enabled() && h.mode != MODE_NONE && fighting() && h.page == PAGE_CLOSED ? spd.speed : 1;
 }
 
-static bool supported(int item)
+/* ---------------------------------------------------------------- */
+/* Tournament: up to eight named players, as on the SNES              */
+/* ---------------------------------------------------------------- */
+
+// Players take turns in pairs: the winner stays on and the loser goes to
+// the back of the line. Each match is a two-player game on the arcade's
+// own character screen; the winner is read from the game's win counters.
+#define TN_MAX 8
+static struct {
+    char name[TN_MAX][4];
+    int w[TN_MAX], l[TN_MAX];
+    int queue[TN_MAX], qn;      // fighting order: [0] (player 1 side) and [1] fight next
+    int row, letter;            // roster cursor and the letter being chosen
+    bool armed;                 // win counters noted for the match being fought
+    int wins_before[2];
+    int over_t;                 // frames since the match ended
+    bool next;                  // go on to the next fight (title screen, NEXT FIGHT)
+} tn;
+
+static int tn_named(void)
 {
-    return item != MAIN_TOURNAMENT;     // the tournament ladder is not built yet
+    int n = 0;
+    for (int i = 0; i < TN_MAX; i++) n += tn.name[i][0] != 0;
+    return n;
 }
+
+// The fighting order follows the roster, keeping the order already played.
+static void tn_build_queue(void)
+{
+    int q[TN_MAX], n = 0;
+    for (int k = 0; k < tn.qn; k++) if (tn.name[tn.queue[k]][0]) q[n++] = tn.queue[k];
+    for (int i = 0; i < TN_MAX; i++) {
+        bool in = false;
+        for (int k = 0; k < n; k++) in |= q[k] == i;
+        if (tn.name[i][0] && !in) q[n++] = i;
+    }
+    memcpy(tn.queue, q, sizeof q);
+    tn.qn = n;
+}
+
+static int wins_of(int p) { return ram2[game.wins + (uint32_t)p * game.player_step]; }
+
+// Called each frame of a tournament match.
+static void tn_frame(void)
+{
+    if (!game.wins || !game.match_over) return;
+    if (all_picked() && !ram2[game.match_over] && !tn.armed) {
+        tn.wins_before[0] = wins_of(0);
+        tn.wins_before[1] = wins_of(1);
+        tn.armed = true;
+        tn.over_t = 0;
+    }
+    if (!tn.armed || !ram2[game.match_over]) return;
+    int won = wins_of(0) != tn.wins_before[0] ? 0 : wins_of(1) != tn.wins_before[1] ? 1 : -1;
+    if (won < 0 && ++tn.over_t < 900) return;           // the counters change a little after
+    tn.armed = false;
+    if (won >= 0 && tn.qn >= 2) {
+        int winner = tn.queue[won], loser = tn.queue[won ^ 1];
+        tn.w[winner]++;
+        tn.l[loser]++;
+        fprintf(stderr, "home: tournament: %s beat %s\n", tn.name[winner], tn.name[loser]);
+        int q[TN_MAX], n = 0;
+        q[n++] = winner;
+        for (int k = 2; k < tn.qn; k++) q[n++] = tn.queue[k];
+        q[n++] = loser;
+        memcpy(tn.queue, q, sizeof q);
+    }
+    tn.next = true;
+}
+
 
 static void title_state_path(char *buf, size_t n)
 {
@@ -359,6 +429,8 @@ static void open_page(int page, int sel)
 void home_reset(void)
 {
     stage_clear();
+    tn.armed = false;
+    training_timer_off = false;
     spd.speed = 1;
     spd.chosen = false;
     training_forced = false;
@@ -382,8 +454,9 @@ static void change_option(int dir)
         h.switches_changed = true;      // the game reads it at power-on
         break;
     }
+    case OPT_RANDOM: cfg.home_random = !cfg.home_random; break;
+    case OPT_TIMER: cfg.home_timer = !cfg.home_timer; break;
     case OPT_BLOOD: cfg.blood = ((cfg.blood + d) % 4 + 4) % 4; h.switches_changed = true; break;
-    case OPT_BLOODCOL: cfg.blood_colour = !cfg.blood_colour; h.switches_changed = true; break;
     case OPT_FINISH: cfg.finishing_moves = !cfg.finishing_moves; h.switches_changed = true; break;
     case OPT_CONTROLS: if (!dir) frontend_open_controls(); return;
     case OPT_EXIT:
@@ -409,17 +482,42 @@ static void change_option(int dir)
     frontend_settings_changed();
 }
 
-static void choose(int item)
+static void start_mode(int mode)
 {
-    if (!supported(item)) { osd_message("Tournament: coming soon"); return; }
-    if (item == MAIN_OPTIONS) { open_page(PAGE_OPTIONS, 0); return; }
-    h.main_sel = item;
-    h.mode = item == MAIN_ARCADE ? MODE_ARCADE : item == MAIN_VS ? MODE_VS : MODE_PRACTICE;
-    h.want_players = h.mode == MODE_ARCADE ? 1 : 2;
-    training_forced = h.mode == MODE_PRACTICE;
+    h.mode = mode;
+    h.want_players = mode == MODE_ARCADE ? 1 : 2;
+    training_forced = mode == MODE_PRACTICE;
     h.page = PAGE_CLOSED;
     h.starting = true;
     h.seq_wait = 0;
+}
+
+static void choose(int item)
+{
+    if (item == MAIN_OPTIONS) { open_page(PAGE_OPTIONS, 0); return; }
+    if (item == MAIN_TOURNAMENT) { h.main_sel = item; open_page(PAGE_ROSTER, 0); return; }
+    h.main_sel = item;
+    start_mode(item == MAIN_ARCADE ? MODE_ARCADE : item == MAIN_VS ? MODE_VS : MODE_PRACTICE);
+}
+
+// The roster: Up/Down a player, Left/Right a letter, A or B enters it,
+// Y deletes the name, X the player (name and record), Start fights,
+// R (no Select button on the cabinet) goes back.
+static void roster_frame(uint32_t pr, int ud, int lr)
+{
+    char *nm = tn.name[tn.row];
+    size_t len = strlen(nm);
+    if (ud) tn.row = (tn.row + ud + TN_MAX) % TN_MAX;
+    if (lr) tn.letter = (tn.letter + lr + 26) % 26;
+    if (pr & (1u << BTN_LF | 1u << BTN_LM) && len < 3) { nm[len] = (char)('A' + tn.letter); nm[len + 1] = 0; }
+    if (pr >> BTN_HM & 1) nm[0] = 0;
+    if (pr >> BTN_HF & 1) { nm[0] = 0; tn.w[tn.row] = tn.l[tn.row] = 0; }
+    if (pr >> BTN_LQ & 1) { open_page(PAGE_MAIN, MAIN_TOURNAMENT); return; }
+    if (pr >> BTN_START & 1) {
+        if (tn_named() < 2) { osd_message("Enter at least two players"); return; }
+        tn_build_queue();
+        open_page(PAGE_NEXT, 0);
+    }
 }
 
 // Presses from either player, with auto-repeat on a held up/down.
@@ -445,15 +543,23 @@ static void navigate(const uint32_t held[2], int *ud, int *lr, bool *ok, bool *b
 
 static int page_items(void)
 {
-    return h.page == PAGE_MAIN ? MAIN_COUNT : h.page == PAGE_OPTIONS ? OPT_COUNT : PAUSE_COUNT;
+    return h.page == PAGE_MAIN ? MAIN_COUNT : h.page == PAGE_OPTIONS ? OPT_COUNT : h.page == PAGE_PAUSE ? PAUSE_COUNT : 1;
 }
 
 static void menu_frame(const uint32_t held[2])
 {
     int ud, lr;
     bool ok, back;
+    uint32_t pr = (held[0] & ~h.prev[0]) | (held[1] & ~h.prev[1]);
     navigate(held, &ud, &lr, &ok, &back);
     h.anim++;
+    if (h.page == PAGE_ROSTER) { roster_frame(pr, ud, lr); return; }
+    if (h.page == PAGE_NEXT) {
+        // NEXT FIGHT: Start, or a few seconds, and the match begins
+        if (pr >> BTN_START & 1 || h.anim > 240) start_mode(MODE_TOURNAMENT);
+        else if (pr >> BTN_LQ & 1) open_page(PAGE_ROSTER, 0);
+        return;
+    }
     int n = page_items();
     if (ud) h.sel = (h.sel + ud + n) % n;
     if (h.page == PAGE_MAIN) {
@@ -472,16 +578,20 @@ static void menu_frame(const uint32_t held[2])
 }
 
 // Back to the title screen and the menu: the state saved there, or a reset.
+// In a tournament between matches, to the NEXT FIGHT screen instead.
 static void return_to_menu(void)
 {
     char path[4200];
     title_state_path(path, sizeof path);
     int was = h.mode;
+    bool next = tn.next;
+    tn.next = false;
     home_reset();
     fprintf(stderr, "home: back to the menu (%s)\n", h.title_saved ? "title state" : "reset");
     if (h.title_saved && state_load_file(path)) {
         memset(h.prev, 0xff, sizeof h.prev);        // the button that chose this is still down
-        open_page(PAGE_MAIN, was == MODE_VS ? MAIN_VS : was == MODE_PRACTICE ? MAIN_PRACTICE : MAIN_ARCADE);
+        if (next) open_page(PAGE_NEXT, 0);
+        else open_page(PAGE_MAIN, was == MODE_VS ? MAIN_VS : was == MODE_PRACTICE ? MAIN_PRACTICE : was == MODE_TOURNAMENT ? MAIN_TOURNAMENT : MAIN_ARCADE);
         return;
     }
     h.title_saved = false;
@@ -492,7 +602,8 @@ static void return_to_menu(void)
 void home_inputs(uint32_t held[2])
 {
     if (!home_enabled()) return;
-    if (h.restore) { h.restore = false; return_to_menu(); held[0] = held[1] = 0; return; }
+    if (h.restore || tn.next) { h.restore = false; return_to_menu(); held[0] = held[1] = 0; return; }
+    training_timer_off = !cfg.home_timer && h.mode != MODE_NONE;
 
     // The menu is open: it takes every button, and the game stays on its
     // title screen behind it (pressed again if the title times out).
@@ -576,7 +687,8 @@ void home_inputs(uint32_t held[2])
     }
 
     if (h.mode != MODE_PRACTICE) random_frame(held, pressed);
-    if (h.mode == MODE_VS || h.mode == MODE_PRACTICE) stage_frame(held);
+    if (h.mode == MODE_VS || h.mode == MODE_PRACTICE || h.mode == MODE_TOURNAMENT) stage_frame(held);
+    if (h.mode == MODE_TOURNAMENT) tn_frame();
     if (h.mode != MODE_NONE) speed_frame(held);
 
     // In one of the menu's modes, Start pauses at any time, as on the
@@ -600,7 +712,7 @@ void home_inputs(uint32_t held[2])
 // The menu shows a few frames after the title was asked for: save it then.
 static void maybe_save_title(void)
 {
-    if (h.title_saved || h.page != PAGE_MAIN || h.anim != 30 || in_attract() || playing()) return;
+    if (h.title_saved || (h.page != PAGE_MAIN && h.page != PAGE_ROSTER) || h.anim != 30 || in_attract() || playing()) return;
     char path[4200];
     title_state_path(path, sizeof path);
     h.title_saved = state_save_file(path);
@@ -611,64 +723,131 @@ static void maybe_save_title(void)
 /* Drawing                                                           */
 /* ---------------------------------------------------------------- */
 
-#define C_ITEM   0xd8e4f0u      // pale steel, like the arcade's captions
-#define C_SEL    0xffd23cu      // gold
+#define C_ITEM   0xf2f2f2u      // white, as the SNES menu
+#define C_SEL    0xffd23cu      // its yellow for the chosen line
 #define C_DIM    0x707884u
 #define C_VALUE  0x9fe8ffu      // the cyan of the arcade's credits text
+#define C_HELP   0x7ee07eu      // the SNES screens' green help lines
+#define C_GOLD   0xf0c040u
 
-static void draw_list(uint32_t *ov, const char *const *items, const char *const *values, int n, int sel, int y, int step)
+static int fade_in(void) { return h.anim < 12 ? (int)h.anim * 255 / 12 : 255; }
+
+static void draw_main(uint32_t *ov)
 {
-    int fade = h.anim < 12 ? (int)h.anim * 255 / 12 : 255;
-    for (int i = 0; i < n; i++) {
-        bool on = i == sel;
-        uint32_t c = on ? C_SEL : C_ITEM;
-        if (h.page == PAGE_MAIN && !supported(i)) c = on ? 0xa08a40u : C_DIM;
-        if (!values || !values[i]) {
-            text_c(ov, F_BODY, y + i * step, items[i], c, fade);
-            if (on) {
-                int w = text_width(F_BODY, items[i]);
-                text(ov, F_BODY, (320 - w) / 2 - 16, y + i * step, "-", c, fade);
-                text(ov, F_BODY, (320 + w) / 2 + 8, y + i * step, "-", c, fade);
-            }
-        } else {
-            text(ov, F_BODY, 52, y + i * step, items[i], c, fade);
-            char v[48];
-            snprintf(v, sizeof v, on ? "< %s >" : "%s", values[i]);
-            int w = text_width(F_BODY, v);
-            text(ov, F_BODY, 268 - w, y + i * step, v, on ? C_SEL : C_VALUE, fade);
+    shade(ov, 120, 240, 40, 252);           // covers the title's own "FREE PLAY"
+    for (int i = 0; i < MAIN_COUNT; i++)
+        text_c(ov, F_BODY, 150 + i * 14, main_items[i], i == h.sel ? C_SEL : C_ITEM, fade_in());
+}
+
+// A row of five marks for the arcade's five CPU levels, like the SNES stars.
+static void stars(uint32_t *ov, int x, int y, int level, int alpha)
+{
+    for (int i = 0; i < 5; i++) {
+        uint32_t c = i < level ? C_SEL : 0x505860u;
+        for (int dy = -3; dy <= 3; dy++)
+            for (int dx = -3; dx <= 3; dx++)
+                if (abs(dx) + abs(dy) <= 3) blend(&ov[(y + dy) * 320 + x + i * 10 + dx], c, (unsigned)alpha);
+    }
+}
+
+static void draw_options(uint32_t *ov)
+{
+    shade(ov, 0, 240, 1, 245);
+    int a = fade_in();
+    text_c(ov, F_BIG, 16, "OPTIONS", C_ITEM, a);
+    int dl = adjust_difficulty();
+    char line[OPT_COUNT][48];
+    snprintf(line[OPT_DIFFICULTY], 48, "DIFFICULTY:  EASY");
+    snprintf(line[OPT_RANDOM], 48, "RANDOM SELECT:  %s", cfg.home_random ? "ON" : "OFF");
+    snprintf(line[OPT_TIMER], 48, "TIMER:  %s", cfg.home_timer ? "ON" : "OFF");
+    snprintf(line[OPT_BLOOD], 48, "BLOOD:  %s", blood_names[cfg.blood & 3]);
+    snprintf(line[OPT_FINISH], 48, "FINISHING MOVES:  %s", cfg.finishing_moves ? "ON" : "OFF");
+    snprintf(line[OPT_CONTROLS], 48, "CONTROLS");
+    snprintf(line[OPT_EXIT], 48, "EXIT");
+    for (int i = 0; i < OPT_COUNT; i++) {
+        int y = 52 + i * 19 + (i >= OPT_CONTROLS ? 10 : 0);
+        uint32_t c = i == h.sel ? C_SEL : C_ITEM;
+        text(ov, F_BODY, 40, y, line[i], c, a);
+        if (i == OPT_DIFFICULTY) {
+            int x = 40 + text_width(F_BODY, line[i]) + 10;
+            stars(ov, x + 3, y + 9, dl < 1 || dl > 5 ? 0 : dl, a);
+            text(ov, F_BODY, x + 52, y, "HARD", c, a);
         }
     }
+    text_c(ov, F_SMALL, 200, "LEFT/RIGHT: CHANGE", C_HELP, a);
+    if (h.switches_changed)
+        text_c(ov, F_SMALL, 214, "THE GAME RESTARTS ON EXIT TO APPLY THESE", C_DIM, a);
+}
+
+static void draw_roster(uint32_t *ov)
+{
+    shade(ov, 0, 240, 1, 248);
+    int a = fade_in();
+    text_c(ov, F_BIG, 8, "TOURNAMENT", C_ITEM, a);
+    text(ov, F_SMALL, 232, 32, "W  /  L", C_ITEM, a);
+    for (int i = 0; i < TN_MAX; i++) {
+        int y = 44 + i * 15;
+        uint32_t c = i == tn.row ? C_SEL : C_ITEM;
+        char b[24];
+        snprintf(b, sizeof b, "PLAYER %d:", i + 1);
+        text(ov, F_BODY, 46, y, b, c, a);
+        text(ov, F_BODY, 140, y, tn.name[i], c, a);
+        if (i == tn.row && strlen(tn.name[i]) < 3 && (h.anim / 16) % 2 == 0) {
+            char l[2] = { (char)('A' + tn.letter), 0 };
+            text(ov, F_BODY, 140 + text_width(F_BODY, tn.name[i]) + 2, y, l, C_VALUE, a);
+        }
+        snprintf(b, sizeof b, "%02d  %02d", tn.w[i] % 100, tn.l[i] % 100);
+        text(ov, F_BODY, 232, y, b, c, a);
+    }
+    text_c(ov, F_SMALL, 172, "START: FIGHT      X: DELETE PLAYER", C_HELP, a);
+    text_c(ov, F_SMALL, 186, "A,B: ENTER      Y: DELETE NAME", C_HELP, a);
+    text_c(ov, F_SMALL, 200, "LEFT/RIGHT: LETTER      R: EXIT", C_HELP, a);
+}
+
+static void draw_next(uint32_t *ov)
+{
+    shade(ov, 0, 240, 1, 248);
+    int a = fade_in();
+    text_c(ov, F_BIG, 14, "NEXT FIGHT", C_GOLD, a);
+    if (tn.qn < 2) return;
+    for (int side = 0; side < 2; side++) {
+        int who = tn.queue[side], cx = side ? 236 : 84;
+        char b[16];
+        const char *nm = tn.name[who];
+        text(ov, F_BIG, cx - text_width(F_BIG, nm) / 2, 62, nm, C_ITEM, a);
+        snprintf(b, sizeof b, "%02d/%02d", tn.w[who] % 100, tn.l[who] % 100);
+        text(ov, F_BODY, cx - text_width(F_BODY, b) / 2, 90, b, C_GOLD, a);
+        text(ov, F_SMALL, cx - text_width(F_SMALL, side ? "PLAYER 2" : "PLAYER 1") / 2, 108, side ? "PLAYER 2" : "PLAYER 1", C_DIM, a);
+    }
+    text_c(ov, F_BIG, 72, "VS", C_GOLD, a);
+    if ((h.anim / 24) % 2 == 0) text_c(ov, F_BODY, 134, "PRESS START", C_ITEM, a);
+    // the line of players waiting, in two columns as on the SNES
+    for (int k = 2; k < tn.qn; k++) {
+        int i = tn.queue[k], col = (k - 2) / 3, row = (k - 2) % 3;
+        char b[40];
+        snprintf(b, sizeof b, "%d: %-3s %02d/%02d", i + 1, tn.name[i], tn.w[i] % 100, tn.l[i] % 100);
+        text(ov, F_SMALL, col ? 178 : 30, 170 + row * 14, b, C_ITEM, a);
+    }
+}
+
+static void draw_pause(uint32_t *ov)
+{
+    shade(ov, 80, 160, 1, 170);
+    static const char *const items[PAUSE_COUNT] = { "CONTINUE", "MAIN MENU" };
+    text_c(ov, F_BIG, 86, "PAUSE", C_ITEM, 255);
+    for (int i = 0; i < PAUSE_COUNT; i++)
+        text_c(ov, F_BODY, 116 + i * 18, items[i], i == h.sel ? C_SEL : C_ITEM, fade_in());
 }
 
 void home_draw(uint32_t *ov)
 {
     if (!home_enabled() || h.page == PAGE_CLOSED) return;
     maybe_save_title();
-    if (h.page == PAGE_MAIN) {
-        shade(ov, 112, 240, 46, 252);         // covers the title's own "FREE PLAY"
-        draw_list(ov, main_items, NULL, MAIN_COUNT, h.sel, 138, 17);
-    } else if (h.page == PAGE_OPTIONS) {
-        shade(ov, 0, 240, 1, 225);
-        text_c(ov, F_BIG, 26, "OPTIONS", C_ITEM, 255);
-        static const char *const items[OPT_COUNT] = { "DIFFICULTY", "BLOOD", "BLOOD COLOUR", "FINISHING MOVES", "CONTROLS", "EXIT" };
-        const char *values[OPT_COUNT] = { 0 };
-        int dl = adjust_difficulty();
-        values[OPT_DIFFICULTY] = dl < 1 || dl > 5 ? "?" : diff_names[dl];
-        values[OPT_BLOOD] = blood_names[cfg.blood & 3];
-        values[OPT_BLOODCOL] = cfg.blood_colour ? "WHITE" : "RED";
-        values[OPT_FINISH] = cfg.finishing_moves ? "ON" : "OFF";
-        int n = OPT_COUNT;
-        const char *it[OPT_COUNT];
-        const char *va[OPT_COUNT];
-        for (int i = 0; i < n; i++) { it[i] = items[i]; va[i] = values[i]; }
-        if (!game.has_blood_colour) { it[OPT_BLOODCOL] = "BLOOD COLOUR"; va[OPT_BLOODCOL] = "-"; }
-        draw_list(ov, it, va, n, h.sel, 70, 22);
-        if (h.switches_changed)
-            text_c(ov, F_SMALL, 212, "The game restarts on Exit to apply these", C_DIM, 255);
-    } else {
-        shade(ov, 80, 160, 1, 170);
-        static const char *const items[PAUSE_COUNT] = { "CONTINUE", "MAIN MENU" };
-        text_c(ov, F_BIG, 86, "PAUSE", C_ITEM, 255);
-        draw_list(ov, items, NULL, PAUSE_COUNT, h.sel, 116, 18);
+    switch (h.page) {
+    case PAGE_MAIN: draw_main(ov); break;
+    case PAGE_OPTIONS: draw_options(ov); break;
+    case PAGE_ROSTER: draw_roster(ov); break;
+    case PAGE_NEXT: draw_next(ov); break;
+    default: draw_pause(ov); break;
     }
 }

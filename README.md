@@ -3,11 +3,15 @@
 KI Arcade with Menus: the arcade game, run natively by UltraCombo, with the
 home versions' menu on top of it.
 
-Press Start in the attract loop for **Arcade, VS, Practice and Options**
-(Tournament is coming). Start pauses at any time in these modes, and the
-console codes work: stage select (hold a direction and pick with a button),
-speed on the VS screen, random fighter (Up + Start). Set `home_menu = no` in
-`ki1.ini` for the plain arcade game.
+Press Start in the attract loop for the SNES menu: **1 Player Game, 2 Player
+Game, Tournament Game (up to eight named players, winner stays on), Practice
+Game and Options** (difficulty, random select, timer, blood, finishing moves,
+controls). Start pauses at any time in these modes, and the console codes
+work: stage select (hold a direction and pick with a button), speed on the VS
+screen, random fighter (Up + Start). The SNES pad maps to the cabinet as
+L Y X = weak/medium/fierce punch and R B A = weak/medium/fierce kick. Set
+`home_menu = no` in `ki1.ini` for the plain arcade game. The menu runs on the
+L1.5D version.
 
 This is a fork of [UltraCombo](https://github.com/thefixinhixon/UltraCombo);
 everything below is its manual and applies here too. As with UltraCombo,

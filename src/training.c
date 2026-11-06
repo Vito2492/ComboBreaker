@@ -17,6 +17,7 @@
 #define REFILL_DELAY 45         // frames without damage before health refills
 
 bool training_forced;
+bool training_timer_off;
 
 static void poke8(uint32_t off, uint8_t v)
 {
@@ -29,9 +30,11 @@ static struct { uint8_t last; int still; } hp[2];
 
 void training_apply(bool real)
 {
-    if (!(cfg.training || training_forced) || !game.health_p1) return;
+    bool train = cfg.training || training_forced;
+    if (!(train || training_timer_off) || !game.health_p1) return;
     // the clock: only touch it while it shows plausible digits
     if (ram2[TIMER_ONES] <= 9 && ram2[TIMER_TENS] <= 9 && ram2[TIMER_TICK] < 0x50) poke8(TIMER_TICK, 0x40);
+    if (!train) return;
     for (int p = 0; p < 2; p++) {
         uint32_t off = HEALTH_P1 + (uint32_t)p * HEALTH_STEP;
         uint8_t h = ram2[off];

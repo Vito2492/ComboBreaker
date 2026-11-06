@@ -51,6 +51,7 @@ typedef struct {
     bool perf_overlay;
     bool training;             // health refill + timer freeze
     bool home_menu;            // console-style menu (Arcade, VS, Practice, Options) on Start
+    bool home_random, home_timer;   // its Options: random select, the fight clock
     // the board's DIP switches
     bool free_play;
     char version[16];

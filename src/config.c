@@ -133,7 +133,11 @@ static void build_table(void)
         add("game", "blood_colour", T_ENUM, &cfg.blood_colour, "red", "red or white", blood_colour_names);
     add("game", "finishing_moves", T_BOOL, &cfg.finishing_moves, "yes", "Ultra combos and No Mercy finishers", 0);
     if (game.attract)
-        add("game", "home_menu", T_BOOL, &cfg.home_menu, "yes", "console-style menu on Start: Arcade, VS, Practice, Options", 0);
+    {
+        add("game", "home_menu", T_BOOL, &cfg.home_menu, "yes", "console-style menu on Start: Arcade, VS, Tournament, Practice, Options", 0);
+        add("game", "home_random_select", T_BOOL, &cfg.home_random, "no", "console menu Options: fighters are drawn at random", 0);
+        add("game", "home_timer", T_BOOL, &cfg.home_timer, "yes", "console menu Options: the fight clock runs", 0);
+    }
     add("game", "demo_sounds", T_BOOL, &cfg.demo_sounds, "yes", "sound during the attract mode", 0);
     add_str("netplay", "address", cfg.net_address, "", "host to join (name or IP, optionally :port)");
     add("netplay", "port", T_INT, &cfg.net_port, "7845", "UDP port to host on (forward it on your router, or use a VPN such as Tailscale)", 0);

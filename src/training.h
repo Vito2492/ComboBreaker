@@ -11,6 +11,8 @@ void training_apply(bool real);
 
 // Training mode for this session only (the home menu's Practice), not saved.
 extern bool training_forced;
+// The clock stands still (the home menu's TIMER: OFF), without the rest of training.
+extern bool training_timer_off;
 
 void training_record_toggle(void);   // start/stop recording the dummy
 void training_play_toggle(void);
