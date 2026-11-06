@@ -1,3 +1,22 @@
+# ComboBreaker
+
+KI Arcade with Menus: the arcade game, run natively by UltraCombo, with the
+home versions' menu on top of it.
+
+Press Start in the attract loop for **Arcade, VS, Practice and Options**
+(Tournament is coming). Start pauses at any time in these modes, and the
+console codes work: stage select (hold a direction and pick with a button),
+speed on the VS screen, random fighter (Up + Start). Set `home_menu = no` in
+`ki1.ini` for the plain arcade game.
+
+This is a fork of [UltraCombo](https://github.com/thefixinhixon/UltraCombo);
+everything below is its manual and applies here too. As with UltraCombo,
+players supply their own game files, and nothing made from them is in this
+repository. The menu's lettering is Sorts Mill Goudy (SIL Open Font Licence,
+`tools/fonts/OFL.txt`).
+
+---
+
 # UltraCombo
 
 Native PC ports of the Killer Instinct arcade games, for Windows and Linux:
