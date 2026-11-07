@@ -31,6 +31,7 @@ const game_t game_ki1 = {
     .has_blood_colour = true,
 
     .health_p1 = 0x8bc55, .health_step = 0x100, .health_max = 120,   // each of the two bars
+    .health_frac = 0x8bc54,     // health is 16 bits (0x7800 full); the bar drawer at 8800b33c reads both
     .timer_tick = 0x884f8, .timer_ones = 0x884f9, .timer_tens = 0x884fa,
     .vars = 0x880000, .vars_len = 0x10000,
     // found by comparing RAM in attract, title, character select and fights
@@ -38,6 +39,7 @@ const game_t game_ki1 = {
     // the stage routine at 880004a8 (traced by hand)
     .stage_pool = 0xe4a4, .stage_last = 0x8dc28, .stage = 0x86238,
     .match_over = 0x86230, .wins = 0x8f312, .title_timer = 0x8f2c0,
+    .music_set = 0x86240, .music = 0x86241,     // read at 880007a0, table at 8800e4d4
 
     // found by changing the difficulty in the game's operator menu (both versions)
     .adj_data = 0x1a00, .adj_len = 512, .adj_difficulty = 0x1a18,

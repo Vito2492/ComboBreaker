@@ -266,6 +266,7 @@ static struct {
     bool restore;               // load that state now (from the pause panel)
     bool route_armed;           // practice: player 1 has let go since picking
     uint32_t prev[2];           // last frame's buttons, for presses
+    unsigned mprev;             // last frame's menu buttons (frontend_menu_buttons)
     int repeat, repeat_dir;     // held up/down auto-repeat
     int cool;                   // frames before Start may be pressed again
     int rejoin_t, rejoin_next;  // VS: Start presses that bring both players back
@@ -307,6 +308,30 @@ static void random_frame(uint32_t held[2], const uint32_t pressed[2])
         if (t < n * 8) { if (t % 8 < 3) held[p] |= 1u << BTN_RIGHT; }       // step along the row
         else if (t < n * 8 + 4) held[p] |= 1u << BTN_HQ;                   // and pick
         else rnd.steps[p] = 0;
+    }
+}
+
+/* ---------------------------------------------------------------- */
+/* Music: each stage's own, as on the SNES                            */
+/* ---------------------------------------------------------------- */
+
+// The arcade draws a two-player fight's music at random; the home
+// versions play the stage's. Once the game has drawn the stage (it never
+// repeats the last one, so the stage number changes), it is told to play
+// that stage's track, the way the one-player game does.
+static struct { int before; bool done; int wait; } mus = { -1, false, 0 };
+
+static void music_frame(void)
+{
+    if (!game.music_set || !game.stage) return;
+    if (!all_picked()) { mus.before = -1; mus.done = false; mus.wait = 0; return; }
+    if (mus.done) return;
+    if (mus.before < 0) mus.before = ram2[game.stage];
+    int st = ram2[game.stage];
+    if ((st != mus.before || ++mus.wait > 200) && st > 0 && st <= 20) {
+        poke(game.music_set, 1);
+        poke(game.music, (uint8_t)st);
+        mus.done = true;
     }
 }
 
@@ -453,6 +478,7 @@ void home_reset(void)
 }
 
 bool home_paused(void) { return h.page == PAGE_PAUSE; }
+bool home_menu_open(void) { return h.page != PAGE_CLOSED && h.page != PAGE_PAUSE; }
 
 static void change_option(int dir)
 {
@@ -521,16 +547,16 @@ static void choose(int item)
 // The roster: Up/Down a player, Left/Right a letter, A or B enters it,
 // Y deletes the name, X the player (name and record), Start fights,
 // R (no Select button on the cabinet) goes back.
-static void roster_frame(uint32_t pr, int ud, int lr)
+static void roster_frame(uint32_t pr, unsigned mb, int ud, int lr)
 {
     char *nm = tn.name[tn.row];
     size_t len = strlen(nm);
     if (ud) tn.row = (tn.row + ud + TN_MAX) % TN_MAX;
     if (lr) tn.letter = (tn.letter + lr + 26) % 26;
-    if (pr & (1u << BTN_LF | 1u << BTN_LM) && len < 3) { nm[len] = (char)('A' + tn.letter); nm[len + 1] = 0; }
-    if (pr >> BTN_HM & 1) nm[0] = 0;
-    if (pr >> BTN_HF & 1) { nm[0] = 0; tn.w[tn.row] = tn.l[tn.row] = 0; }
-    if (pr >> BTN_LQ & 1) { open_page(PAGE_MAIN, MAIN_TOURNAMENT); return; }
+    if (mb & MB_SELECT) { open_page(PAGE_MAIN, MAIN_TOURNAMENT); return; }
+    if (mb & (MB_A | MB_B) && len < 3) { nm[len] = (char)('A' + tn.letter); nm[len + 1] = 0; }
+    if (mb & MB_Y) nm[0] = 0;
+    if (mb & MB_X) { nm[0] = 0; tn.w[tn.row] = tn.l[tn.row] = 0; }
     if (pr >> BTN_START & 1) {
         if (tn_named() < 2) { osd_message("Enter at least two players"); return; }
         tn_build_queue();
@@ -539,7 +565,15 @@ static void roster_frame(uint32_t pr, int ud, int lr)
 }
 
 // Presses from either player, with auto-repeat on a held up/down.
-static void navigate(const uint32_t held[2], int *ud, int *lr, bool *ok, bool *back)
+// The menu's own buttons (SNES places, never remapped) pressed this frame.
+static unsigned menu_pressed(void)
+{
+    unsigned now = frontend_menu_buttons(), pr = now & ~h.mprev;
+    h.mprev = now;
+    return pr;
+}
+
+static void navigate(const uint32_t held[2], unsigned mb, int *ud, int *lr, bool *ok, bool *back)
 {
     *ud = *lr = 0;
     *ok = *back = false;
@@ -550,8 +584,10 @@ static void navigate(const uint32_t held[2], int *ud, int *lr, bool *ok, bool *b
     if (pressed >> BTN_DOWN & 1) *ud = 1;
     if (pressed >> BTN_LEFT & 1) *lr = -1;
     if (pressed >> BTN_RIGHT & 1) *lr = 1;
-    if (pressed & (1u << BTN_START | 1u << BTN_HQ | 1u << BTN_LQ)) *ok = true;
-    if (pressed & (1u << BTN_HM | 1u << BTN_LM)) *back = true;
+    // A or Start chooses, B goes back, as on the SNES; the fighting
+    // buttons play no part, so remapping them never changes the menu
+    if (pressed >> BTN_START & 1 || mb & MB_A) *ok = true;
+    if (mb & MB_B) *back = true;
     int dir = now >> BTN_UP & 1 ? -1 : now >> BTN_DOWN & 1 ? 1 : 0;
     if (dir && dir == h.repeat_dir) {
         if (++h.repeat > 18 && h.repeat % 5 == 0) *ud = dir;
@@ -569,13 +605,14 @@ static void menu_frame(const uint32_t held[2])
     int ud, lr;
     bool ok, back;
     uint32_t pr = (held[0] & ~h.prev[0]) | (held[1] & ~h.prev[1]);
-    navigate(held, &ud, &lr, &ok, &back);
+    unsigned mb = menu_pressed();
+    navigate(held, mb, &ud, &lr, &ok, &back);
     h.anim++;
-    if (h.page == PAGE_ROSTER) { roster_frame(pr, ud, lr); return; }
+    if (h.page == PAGE_ROSTER) { roster_frame(pr, mb, ud, lr); return; }
     if (h.page == PAGE_NEXT) {
-        // NEXT FIGHT: Start, or a few seconds, and the match begins
-        if (pr >> BTN_START & 1 || h.anim > 240) start_mode(MODE_TOURNAMENT);
-        else if (pr >> BTN_LQ & 1) open_page(PAGE_ROSTER, 0);
+        // NEXT FIGHT: Start or A, or a few seconds, and the match begins
+        if (ok || h.anim > 240) start_mode(MODE_TOURNAMENT);
+        else if (back) open_page(PAGE_ROSTER, 0);
         return;
     }
     int n = page_items();
@@ -805,6 +842,7 @@ void home_inputs(uint32_t held[2])
     if (h.mode != MODE_PRACTICE) random_frame(held, pressed);
     if (h.mode == MODE_VS || h.mode == MODE_PRACTICE || h.mode == MODE_TOURNAMENT) stage_frame(held);
     if (h.mode == MODE_TOURNAMENT) tn_frame();
+    if (h.mode == MODE_VS || h.mode == MODE_PRACTICE || h.mode == MODE_TOURNAMENT) music_frame();
     if (h.mode != MODE_NONE) speed_frame(held);
 
     // In one of the menu's modes, Start pauses at any time, as on the
@@ -946,7 +984,7 @@ static void draw_roster(uint32_t *ov)
     }
     text_c(ov, F_SMALL, 168, "START: FIGHT    X: DELETE PLAYER", C_HELP, a);
     text_c(ov, F_SMALL, 182, "A,B: ENTER    Y: DELETE NAME", C_HELP, a);
-    text_c(ov, F_SMALL, 196, "LEFT/RIGHT: LETTER    R: EXIT", C_HELP, a);
+    text_c(ov, F_SMALL, 196, "LEFT/RIGHT: LETTER   SELECT: EXIT", C_HELP, a);
 }
 
 static void draw_next(uint32_t *ov)

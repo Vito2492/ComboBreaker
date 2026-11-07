@@ -51,6 +51,7 @@ typedef struct {
     uint32_t health_p1;         // current health bar, one byte per player...
     uint32_t health_step;       // ...this far apart
     int health_max;
+    uint32_t health_frac;       // the low byte of the 16-bit health, if any (0 = not known)
     uint32_t timer_tick, timer_ones, timer_tens;   // round clock
     uint32_t vars, vars_len;    // range of game variables for netplay's quick check
     // For the console-style menu (home.c): 1 while the attract loop runs; per
@@ -59,6 +60,9 @@ typedef struct {
     // Stage choice: the game draws two-player stages from stage_pool (32
     // bytes) at random, never the one in stage_last; the result lands in stage.
     uint32_t stage_pool, stage_last, stage;
+    // Fight music: with music_set non-zero the game plays track `music` (by
+    // stage number, as the one-player game does) instead of drawing one.
+    uint32_t music_set, music;
     uint32_t title_timer;       // 16 bits: frames until the title screen gives way to the attract loop
     uint32_t wins;              // per player (player_step apart): matches won, for the tournament
     uint32_t match_over;        // non-zero from a lost match through the continue countdown

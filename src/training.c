@@ -49,6 +49,10 @@ void training_apply(bool real)
         // a lost bar or a KO would end the match and hand the dummy to the CPU
         if (h && h < HEALTH_MAX && (hp[p].still >= REFILL_DELAY || training_forced)) {
             poke8(off, HEALTH_MAX);
+            // the health is 16 bits, this byte its whole part: a fraction
+            // left in the low byte puts it past the maximum, and the game
+            // then draws the bar past the end of the screen and its memory
+            if (game.health_frac) poke8(game.health_frac + (uint32_t)p * HEALTH_STEP, 0);
             if (real) hp[p].last = HEALTH_MAX;
         }
     }

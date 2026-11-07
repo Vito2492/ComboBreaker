@@ -875,6 +875,34 @@ void frontend_reset_game(void) { hard_reset(); }
 void frontend_settings_changed(void) { menu_changed = true; }
 uint64_t frontend_frames(void) { return frame_count; }
 
+// SNES places: A east, B south, X north, Y west. SDL names an Xbox layout
+// (A south); for Nintendo pads it may follow the printed labels instead.
+unsigned frontend_menu_buttons(void)
+{
+    unsigned m = 0;
+    for (int p = 0; p < MAX_PADS; p++) {
+        SDL_GameController *c = pads[p];
+        if (!c) continue;
+        bool by_label = pad_family_for_type(SDL_GameControllerGetType(c)) == PAD_FAMILY_SWITCH &&
+            SDL_GetHintBoolean(SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS, SDL_TRUE);
+        int south = by_label ? SDL_CONTROLLER_BUTTON_B : SDL_CONTROLLER_BUTTON_A;
+        int east = by_label ? SDL_CONTROLLER_BUTTON_A : SDL_CONTROLLER_BUTTON_B;
+        int west = by_label ? SDL_CONTROLLER_BUTTON_Y : SDL_CONTROLLER_BUTTON_X;
+        int north = by_label ? SDL_CONTROLLER_BUTTON_X : SDL_CONTROLLER_BUTTON_Y;
+        if (SDL_GameControllerGetButton(c, (SDL_GameControllerButton)east)) m |= MB_A;
+        if (SDL_GameControllerGetButton(c, (SDL_GameControllerButton)south)) m |= MB_B;
+        if (SDL_GameControllerGetButton(c, (SDL_GameControllerButton)north)) m |= MB_X;
+        if (SDL_GameControllerGetButton(c, (SDL_GameControllerButton)west)) m |= MB_Y;
+        if (SDL_GameControllerGetButton(c, SDL_CONTROLLER_BUTTON_BACK)) m |= MB_SELECT;
+    }
+    const uint8_t *ks = SDL_GetKeyboardState(NULL);
+    if (ks[SDL_SCANCODE_RETURN] || ks[SDL_SCANCODE_KP_ENTER]) m |= MB_A;
+    if (ks[SDL_SCANCODE_BACKSPACE]) m |= MB_B | MB_SELECT;
+    if (ks[SDL_SCANCODE_DELETE]) m |= MB_Y;
+    if (ks[SDL_SCANCODE_INSERT]) m |= MB_X;
+    return m;
+}
+
 static void start_join(void)
 {
     if (!*cfg.net_address) { osd_message("Enter the host's address first"); return; }
@@ -1530,7 +1558,7 @@ int frontend_main(void)
         if (SDL_GetTicks() - last_flush > 5000) { ide_flush(); last_flush = SDL_GetTicks(); }
         bool booting = frame_count < (uint64_t)cfg.boot_skip_frames;
         bool fast = key_held(HK_FAST) || pad_held(cfg.pad_fast) || booting;
-        bool rewinding = cfg.rewind && (key_held(HK_REWIND) || pad_held(cfg.pad_rewind));
+        bool rewinding = cfg.rewind && !home_menu_open() && (key_held(HK_REWIND) || pad_held(cfg.pad_rewind));
 
         if (home_paused() && !menu_open) {
             uint32_t held[2];
