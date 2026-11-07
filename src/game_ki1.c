@@ -32,6 +32,7 @@ const game_t game_ki1 = {
 
     .health_p1 = 0x8bc55, .health_step = 0x100, .health_max = 120,   // each of the two bars
     .health_frac = 0x8bc54,     // health is 16 bits (0x7800 full); the bar drawer at 8800b33c reads both
+    .health_shown = 0x8bc56,    // and eases this one toward it
     .timer_tick = 0x884f8, .timer_ones = 0x884f9, .timer_tens = 0x884fa,
     .vars = 0x880000, .vars_len = 0x10000,
     // found by comparing RAM in attract, title, character select and fights

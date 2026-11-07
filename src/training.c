@@ -45,14 +45,22 @@ void training_apply(bool real)
             else { hp[p].last = h; hp[p].still = 0; }
         }
         // refill once a combo is over; a KO (0) is left to the game. In the
-        // home menu's Practice, as on the SNES, nobody loses health at all:
-        // a lost bar or a KO would end the match and hand the dummy to the CPU
-        if (h && h < HEALTH_MAX && (hp[p].still >= REFILL_DELAY || training_forced)) {
+        // home menu's Practice the wait is shorter, so a bar is hardly ever
+        // emptied, but never while a hit is landing: the game is then still
+        // working on the health it took. The whole 16-bit health is written,
+        // and the bar it shows with it, so there is nothing left to animate.
+        int wait = training_forced ? 8 : REFILL_DELAY;
+        if (h && h < HEALTH_MAX && hp[p].still >= wait) {
             poke8(off, HEALTH_MAX);
-            // the health is 16 bits, this byte its whole part: a fraction
-            // left in the low byte puts it past the maximum, and the game
-            // then draws the bar past the end of the screen and its memory
-            if (game.health_frac) poke8(game.health_frac + (uint32_t)p * HEALTH_STEP, 0);
+            if (game.health_frac) {
+                uint32_t frac = game.health_frac + (uint32_t)p * HEALTH_STEP;
+                poke8(frac, 0);
+                if (game.health_shown) {
+                    uint32_t shown = game.health_shown + (uint32_t)p * HEALTH_STEP;
+                    poke8(shown, 0);
+                    poke8(shown + 1, HEALTH_MAX);
+                }
+            }
             if (real) hp[p].last = HEALTH_MAX;
         }
     }

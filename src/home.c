@@ -319,16 +319,17 @@ static void random_frame(uint32_t held[2], const uint32_t pressed[2])
 // versions play the stage's. Once the game has drawn the stage (it never
 // repeats the last one, so the stage number changes), it is told to play
 // that stage's track, the way the one-player game does.
-static struct { int before; bool done; int wait; } mus = { -1, false, 0 };
+static struct { int before; bool done; } mus = { -1, false };
 
 static void music_frame(void)
 {
     if (!game.music_set || !game.stage) return;
-    if (!all_picked()) { mus.before = -1; mus.done = false; mus.wait = 0; return; }
+    if (!all_picked()) { mus.before = -1; mus.done = false; return; }
     if (mus.done) return;
     if (mus.before < 0) mus.before = ram2[game.stage];
     int st = ram2[game.stage];
-    if ((st != mus.before || ++mus.wait > 200) && st > 0 && st <= 20) {
+    if (fighting()) { mus.done = true; return; }        // too late: leave the game's own
+    if (st != mus.before && st > 0 && st <= 20 && (st < 16 || st == 20)) {
         poke(game.music_set, 1);
         poke(game.music, (uint8_t)st);
         mus.done = true;
@@ -1023,9 +1024,23 @@ static void draw_pause(uint32_t *ov)
         text_c(ov, F_BODY, 120 + i * 16, items[i], i == h.sel ? C_SEL : C_ITEM, fade_in());
 }
 
+// Practice as on the SNES: no health bars or clock, just its name. The
+// game draws them into its own picture, so they are covered over.
+static void draw_practice_hud(uint32_t *ov)
+{
+    for (int y = 0; y < 26; y++) {
+        unsigned a = y < 20 ? 255 : 255 - (unsigned)(y - 19) * 36;
+        for (int x = 0; x < 320; x++) blend(&ov[y * 320 + x], 0x000000, a);
+    }
+    text(ov, F_BODY, 8, 6, "PRACTICE", C_ITEM, 255);
+    if ((h.anim++ / 40) % 2 == 0) text(ov, F_SMALL, 104, 8, "- PRESS START", C_ITEM, 255);
+}
+
 void home_draw(uint32_t *ov)
 {
-    if (!home_enabled() || h.page == PAGE_CLOSED) return;
+    if (!home_enabled()) return;
+    if (h.page == PAGE_CLOSED && h.mode == MODE_PRACTICE && fighting()) { draw_practice_hud(ov); return; }
+    if (h.page == PAGE_CLOSED) return;
     maybe_save_title();
     switch (h.page) {
     case PAGE_MAIN: draw_main(ov); break;

@@ -52,6 +52,7 @@ typedef struct {
     uint32_t health_step;       // ...this far apart
     int health_max;
     uint32_t health_frac;       // the low byte of the 16-bit health, if any (0 = not known)
+    uint32_t health_shown;      // the 16-bit health the bar shows, easing toward the real one
     uint32_t timer_tick, timer_ones, timer_tens;   // round clock
     uint32_t vars, vars_len;    // range of game variables for netplay's quick check
     // For the console-style menu (home.c): 1 while the attract loop runs; per

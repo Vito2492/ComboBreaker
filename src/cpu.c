@@ -125,8 +125,14 @@ void cpu_exception(int code, uint32_t badvaddr, bool has_badvaddr)
 
     static int log_exc = -1;
     if (log_exc < 0) log_exc = getenv("KI2_LOG_EXC") != NULL;
-    if (log_exc && code != EXC_INT)
-        fprintf(stderr, "exc %d at %08x%s badva=%08x sr=%08x\n", code, cpu.cur_pc, cpu.in_delay ? " (delay)" : "", badvaddr, sr);
+    // address and bus errors always go to the log (a few): the game does
+    // not raise them in normal play, so they mark where something went wrong
+    static int logged_errors;
+    bool error = (code >= EXC_ADEL && code <= EXC_DBE) || code == EXC_RI;
+    if ((log_exc && code != EXC_INT) || (error && logged_errors < 20)) {
+        if (!log_exc) logged_errors++;
+        fprintf(stderr, "exc %d at %08x%s badva=%08x sr=%08x ra=%08x\n", code, cpu.cur_pc, cpu.in_delay ? " (delay)" : "", badvaddr, sr, (uint32_t)cpu.r[31]);
+    }
 
     if (code >= EXC_MOD && code <= EXC_DBE && getenv("KI2_DUMP_ON_EXC")) {
         FILE *f = fopen("ram0.bin", "wb"); fwrite(ram0, 1, RAM0_SIZE, f); fclose(f);
