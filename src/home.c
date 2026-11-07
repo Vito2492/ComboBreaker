@@ -270,6 +270,7 @@ static struct {
     int cool;                   // frames before Start may be pressed again
     int rejoin_t, rejoin_next;  // VS: Start presses that bring both players back
     bool practice_again;        // Practice ended in a KO: back to its character screen
+    bool practice_live;         // a practice fight has started (the KO check is armed)
     bool title_wait;            // a Start in the attract loop, held until the sound board is up
     int col;                    // Options > CONTROLS: the player column chosen
     int idle;                   // frames the main menu has been left alone
@@ -438,6 +439,7 @@ static void open_page(int page, int sel)
 
 void home_reset(void)
 {
+    h.practice_live = false;
     stage_clear();
     tn.armed = false;
     training_timer_off = false;
@@ -758,9 +760,16 @@ void home_inputs(uint32_t held[2])
     }
     // Practice: if a match ends after all, start the practice over rather
     // than let the arcade go on with the CPU.
-    if (h.mode == MODE_PRACTICE && !h.starting && game.match_over && ram2[game.match_over] && picked(0)) {
-        h.practice_again = true;
-        h.restore = true;
+    // Only a match that ends during this practice counts: the flag can
+    // still be set from an earlier game until the next fight starts.
+    if (h.mode == MODE_PRACTICE && game.match_over) {
+        bool over = ram2[game.match_over] != 0;
+        if (!over && fighting()) h.practice_live = true;
+        if (over && h.practice_live && !h.starting) {
+            h.practice_live = false;
+            h.practice_again = true;
+            h.restore = true;
+        }
     }
 
     // VS: when a match is over both players go back to the character

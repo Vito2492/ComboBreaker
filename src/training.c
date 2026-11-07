@@ -1,6 +1,7 @@
 // Training mode (see training.h). RAM locations come from the game profile
 // (game.h); each value is sanity-checked before use, so other code versions
 // are left alone, and a game without known locations gets no training mode.
+#include <stdlib.h>
 #include "training.h"
 #include "config.h"
 #include "mem.h"
@@ -44,10 +45,9 @@ void training_apply(bool real)
             else { hp[p].last = h; hp[p].still = 0; }
         }
         // refill once a combo is over; a KO (0) is left to the game. In the
-        // home menu's Practice nobody may fall: a long combo is cut short of
-        // a KO, which would end the match and hand the dummy to the CPU
-        bool low = training_forced && h <= HEALTH_MAX / 3;
-        if (h && h < HEALTH_MAX && (hp[p].still >= REFILL_DELAY || low)) {
+        // home menu's Practice, as on the SNES, nobody loses health at all:
+        // a lost bar or a KO would end the match and hand the dummy to the CPU
+        if (h && h < HEALTH_MAX && (hp[p].still >= REFILL_DELAY || training_forced)) {
             poke8(off, HEALTH_MAX);
             if (real) hp[p].last = HEALTH_MAX;
         }
