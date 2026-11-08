@@ -269,9 +269,9 @@ static struct {
     unsigned mprev;             // last frame's menu buttons (frontend_menu_buttons)
     int repeat, repeat_dir;     // held up/down auto-repeat
     int cool;                   // frames before Start may be pressed again
-    int rejoin_t, rejoin_next;  // VS: Start presses that bring both players back
-    bool practice_again;        // Practice ended in a KO: back to its character screen
-    bool practice_live;         // a practice fight has started (the KO check is armed)
+    int again;                  // mode to start over once back at the title (a match ended)
+    bool live;                  // a fight of this mode has started (the end-of-match check is armed)
+    int over_t;                 // frames since that match ended
     bool title_wait;            // a Start in the attract loop, held until the sound board is up
     int col;                    // Options > CONTROLS: the player column chosen
     int idle;                   // frames the main menu has been left alone
@@ -393,7 +393,7 @@ static struct {
     int queue[TN_MAX], qn;      // fighting order: [0] (player 1 side) and [1] fight next
     int row, letter;            // roster cursor and the letter being chosen
     bool armed;                 // win counters noted for the match being fought
-    int wins_before[2];
+    int won;                    // side that won the match being decided
     int over_t;                 // frames since the match ended
     bool next;                  // go on to the next fight (title screen, NEXT FIGHT)
 } tn;
@@ -419,27 +419,30 @@ static void tn_build_queue(void)
     tn.qn = n;
 }
 
-static int wins_of(int p) { return ram2[game.wins + (uint32_t)p * game.player_step]; }
+static int health_of(int p) { return ram2[game.health_p1 + (uint32_t)p * game.health_step]; }
 
-// Called each frame of a tournament match.
+// Called each frame of a tournament match. When the game calls the match
+// over, the loser is the one left without health (on a time-out, the one
+// with less); a couple of seconds on, before the arcade's continue and
+// high-score screens, the tournament moves on to its next fight.
 static void tn_frame(void)
 {
-    if (!game.wins || !game.match_over) return;
-    if (all_picked() && !ram2[game.match_over] && !tn.armed) {
-        tn.wins_before[0] = wins_of(0);
-        tn.wins_before[1] = wins_of(1);
-        tn.armed = true;
-        tn.over_t = 0;
+    if (!game.match_over || !game.health_p1) return;
+    bool over = ram2[game.match_over] != 0;
+    if (all_picked() && !over) { tn.armed = true; tn.over_t = 0; return; }
+    if (!tn.armed || !over) return;
+    if (tn.over_t++ == 0) {
+        int h0 = health_of(0), h1 = health_of(1);
+        tn.won = h1 == 0 && h0 > 0 ? 0 : h0 == 0 && h1 > 0 ? 1 : h0 >= h1 ? 0 : 1;
     }
-    if (!tn.armed || !ram2[game.match_over]) return;
-    int won = wins_of(0) != tn.wins_before[0] ? 0 : wins_of(1) != tn.wins_before[1] ? 1 : -1;
-    if (won < 0 && ++tn.over_t < 900) return;           // the counters change a little after
+    if (tn.over_t < 150) return;                         // the winner's moment
     tn.armed = false;
-    if (won >= 0 && tn.qn >= 2) {
-        int winner = tn.queue[won], loser = tn.queue[won ^ 1];
+    if (tn.qn >= 2) {
+        int winner = tn.queue[tn.won], loser = tn.queue[tn.won ^ 1];
         tn.w[winner]++;
         tn.l[loser]++;
         fprintf(stderr, "home: tournament: %s beat %s\n", tn.name[winner], tn.name[loser]);
+        // the winner stays on; the loser goes to the back of the line
         int q[TN_MAX], n = 0;
         q[n++] = winner;
         for (int k = 2; k < tn.qn; k++) q[n++] = tn.queue[k];
@@ -465,7 +468,7 @@ static void open_page(int page, int sel)
 
 void home_reset(void)
 {
-    h.practice_live = false;
+    h.live = false;
     stage_clear();
     tn.armed = false;
     training_timer_off = false;
@@ -657,7 +660,7 @@ static void return_to_menu(void)
     if (h.title_saved && state_load_file(path)) {
         memset(h.prev, 0xff, sizeof h.prev);        // the button that chose this is still down
         if (next) start_mode(MODE_TOURNAMENT);
-        else if (h.practice_again) { h.practice_again = false; start_mode(MODE_PRACTICE); }
+        else if (h.again) { int m = h.again; h.again = 0; start_mode(m); }
         else open_page(PAGE_MAIN, was == MODE_VS ? MAIN_VS : was == MODE_PRACTICE ? MAIN_PRACTICE : was == MODE_TOURNAMENT ? MAIN_TOURNAMENT : MAIN_ARCADE);
         return;
     }
@@ -796,37 +799,21 @@ void home_inputs(uint32_t held[2])
             else h.starting = false;
         }
     }
-    // Practice: if a match ends after all, start the practice over rather
-    // than let the arcade go on with the CPU.
-    // Only a match that ends during this practice counts: the flag can
-    // still be set from an earlier game until the next fight starts.
-    if (h.mode == MODE_PRACTICE && game.match_over) {
+    // Practice and VS: when a match ends, back to the character screen for
+    // both players (the console's rematch), before the arcade's continue,
+    // winner-stays-on and high-score screens. Only a match that ends in this
+    // mode counts: the flag can still be set from an earlier game until the
+    // next fight starts.
+    if ((h.mode == MODE_PRACTICE || h.mode == MODE_VS) && game.match_over) {
         bool over = ram2[game.match_over] != 0;
-        if (!over && fighting()) h.practice_live = true;
-        if (over && h.practice_live && !h.starting) {
-            h.practice_live = false;
-            h.practice_again = true;
+        if (!over && fighting()) { h.live = true; h.over_t = 0; }
+        if (over && h.live && !h.starting && ++h.over_t >= (h.mode == MODE_VS ? 150 : 1)) {
+            h.live = false;
+            h.again = h.mode;
             h.restore = true;
         }
     }
 
-    // VS: when a match is over both players go back to the character
-    // screen, as on the console, instead of the arcade's winner-stays-on.
-    // Start is pressed for each in turn: the loser continues, and a player
-    // the game has handed to the CPU joins again.
-    if (h.mode == MODE_VS && !h.starting && h.press == 0 && ++h.rejoin_t >= 30) {
-        h.rejoin_t = 0;
-        bool over = game.match_over && ram2[game.match_over];
-        for (int k = 0; k < 2; k++) {
-            int p = (h.rejoin_next + k) & 1;
-            if ((over && in_game(p) && picked(p)) || (!in_game(p) && in_game(p ^ 1))) {
-                h.press = 4;
-                h.press_player = p;
-                h.rejoin_next = p ^ 1;
-                break;
-            }
-        }
-    }
     if (h.press > 0) { held[h.press_player] |= 1u << BTN_START; h.press--; }
 
     // Practice: player 1 picks both fighters, then the dummy stands still.

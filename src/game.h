@@ -65,7 +65,6 @@ typedef struct {
     // stage number, as the one-player game does) instead of drawing one.
     uint32_t music_set, music;
     uint32_t title_timer;       // 16 bits: frames until the title screen gives way to the attract loop
-    uint32_t wins;              // per player (player_step apart): matches won, for the tournament
     uint32_t match_over;        // non-zero from a lost match through the continue countdown
 
     // Operator adjustments on the disk: adj_len bytes at adj_data, the first

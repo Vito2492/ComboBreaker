@@ -39,7 +39,7 @@ const game_t game_ki1 = {
     .attract = 0x8f2da, .in_game = 0x8f326, .picked = 0x8f334, .player_step = 0x68,
     // the stage routine at 880004a8 (traced by hand)
     .stage_pool = 0xe4a4, .stage_last = 0x8dc28, .stage = 0x86238,
-    .match_over = 0x86230, .wins = 0x8f312, .title_timer = 0x8f2c0,
+    .match_over = 0x86230, .title_timer = 0x8f2c0,
     .music_set = 0x86240, .music = 0x86241,     // read at 880007a0, table at 8800e4d4
 
     // found by changing the difficulty in the game's operator menu (both versions)
