@@ -445,25 +445,50 @@ static void report(bool fatal, const char *fmt, ...)
     vsnprintf(msg, sizeof msg, fmt, ap);
     va_end(ap);
     fprintf(stderr, "%s\n", msg);
-    if (!headless_mode && SDL_ShowSimpleMessageBox(fatal ? SDL_MESSAGEBOX_ERROR : SDL_MESSAGEBOX_WARNING, game.product, msg, NULL) != 0)
-        picker_message(game.product, msg);      // no zenity and no X core fonts: our own window
+    if (headless_mode) return;
+    // A missing file: offer to open the folder the files go in.
+    char run[4200];
+    snprintf(run, sizeof run, "%srun", data_dir());
+    make_dir(run);
+    const SDL_MessageBoxButtonData buttons[] = {
+        { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 1, "Open the run folder" },
+        { SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 0, fatal ? "Quit" : "Continue" },
+    };
+    const SDL_MessageBoxData box = {
+        fatal ? SDL_MESSAGEBOX_ERROR : SDL_MESSAGEBOX_WARNING, NULL, game.product, msg, 2, buttons, NULL
+    };
+    int pressed = 0;
+    if (SDL_ShowMessageBox(&box, &pressed) != 0) { picker_message(game.product, msg); return; }   // no zenity and no X core fonts
+    if (pressed == 1) {
+        char url[4300];
+        snprintf(url, sizeof url, "file:///%s", run[0] == '/' ? run + 1 : run);
+        SDL_OpenURL(url);
+    }
 }
 
 static const char *files_help(void)
 {
-    static char buf[8400], where[8200];
+    static char buf[17000], where[8200];
     if (appimage_dir() && strcmp(appimage_dir(), data_dir()))
         snprintf(where, sizeof where, "a folder named run beside the AppImage:\n    %srun\nor:\n    %srun", appimage_dir(), data_dir());
     else
         snprintf(where, sizeof where, "\n    %srun", data_dir());
     snprintf(buf, sizeof buf,
-             "Put the game files in %s\n(or set their paths in %s.ini).\n\n"
-             "Needed (%s):\n"
-             "  %s  - boot ROM\n"
-             "  %s  - hard disk: MAME's CHD as it is (or a raw image, %s)\n"
-             "  %s - %s, %s - %s  - sound ROMs", where, game.id, game.title,
-             game.versions[0].rom, game.chd, game.disk,
-             game.sound_roms[0], game.sound_roms[3], game.sound_roms[4], game.sound_roms[7]);
+             "%s needs your own copy of the arcade game's files (MAME's \"%s\" set).\n"
+             "No game files come with the program.\n\n"
+             "Put these %d files in the run folder:%s\n\n"
+             "  %s   boot ROM\n"
+             "  %s %s %s %s\n"
+             "  %s %s %s %s   sound ROMs\n"
+             "  %s   hard disk (MAME's CHD, as it is)\n\n"
+             "A MAME zip can also be opened directly: drop %s.zip on the program.\n"
+             "README.md lists the files with their checksums.\n\n"
+             "Pon tus archivos del juego en la carpeta run (ver README.md).",
+             game.product, game.set, 10, where,
+             game.versions[0].rom,
+             game.sound_roms[0], game.sound_roms[1], game.sound_roms[2], game.sound_roms[3],
+             game.sound_roms[4], game.sound_roms[5], game.sound_roms[6], game.sound_roms[7],
+             game.chd, game.set);
     return buf;
 }
 

@@ -56,7 +56,7 @@ L Y X are weak, medium and fierce punch, R B A weak, medium and fierce kick.
 
 **No game files are included, and none ever will be.** You need your own,
 legally obtained copy of the arcade game's files: MAME's `kinst` set,
-version L1.5D. Eleven files, all with these exact names:
+version L1.5D. Ten files, all with these exact names:
 
 | File | What it is | Size | MD5 |
 |---|---|---|---|
@@ -109,14 +109,30 @@ is enough. These are approximate:
 | Controls | keyboard, or one or two gamepads (Xbox, PlayStation, Switch and most others) |
 
 The first time you play, the program builds the game's code for your PC,
-which takes about a minute, once. There is no macOS, Android or iOS version.
+which takes about a minute, once.
 
-## Getting started (Windows)
+| Platform | Package | State |
+|---|---|---|
+| Windows 10/11 (64-bit) | `ComboBreaker-Windows.zip` | tested |
+| Linux x86-64 | `ComboBreaker-Linux.tar.xz` | built and tested in the cloud |
+| macOS on Apple silicon (M1 and later) | `ComboBreaker-macOS.tar.xz` | **built, not tested on a Mac yet**: reports welcome |
 
-1. Download ComboBreaker from the Releases page and unzip it.
-2. Put your game files in the `run` folder next to `ComboBreaker.exe`.
-3. Start `ComboBreaker.exe`. The first time it prepares the game for your PC,
-   which takes about a minute, once.
+On macOS the program is not signed: the first time, right-click it and choose
+Open. There is no Android or iOS version yet.
+
+## Getting started
+
+1. Download your platform's package from the
+   [Releases page](https://github.com/Vito2492/ComboBreaker/releases) and
+   unpack it anywhere.
+2. Put your ten game files in the `run` folder inside it (see the table
+   above). They can stay where you keep them, too: drop a MAME `kinst.zip`
+   on the program, or set the paths in `ki1.ini`.
+3. Start `ComboBreaker.exe` (Windows) or `combobreaker` (Linux, macOS). The
+   first time it prepares the game for your PC, about a minute, once.
+
+If a file is missing, the program says which, lists what goes where, and
+offers to open the `run` folder for you.
 
 F1 opens UltraCombo's own menu: graphics, fullscreen and resolution, shaders,
 controls, volume, save states and netplay. See the
@@ -175,7 +191,7 @@ azar); la música de cada escenario.
 400 MB de disco. La primera vez el programa tarda un minuto en prepararse.
 
 **Qué necesitás:** tus propios archivos del juego, obtenidos legalmente: el
-set `kinst` de MAME, versión L1.5D. Son 11 archivos: `ki-l15d.u98` (ROM de
+set `kinst` de MAME, versión L1.5D. Son 10 archivos: `ki-l15d.u98` (ROM de
 arranque), las 8 ROMs de sonido `u10-l1` … `u13-l1` y `u33-l1` … `u36-l1`, y
 el disco `kinst.chd`. La tabla de arriba tiene sus tamaños y checksums para
 comprobar que sean los correctos. No se incluye ningún archivo del juego.
