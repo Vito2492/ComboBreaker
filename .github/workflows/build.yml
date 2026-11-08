@@ -53,9 +53,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Tools
-        run: sudo apt-get update && sudo apt-get install -y libsdl2-dev python3
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3 cmake patchelf libx11-dev libxext-dev libxrandr-dev libxcursor-dev \
+            libxi-dev libxss-dev libxinerama-dev libwayland-dev libxkbcommon-dev libegl-dev libgl-dev \
+            libasound2-dev libpulse-dev libudev-dev libdbus-1-dev
+      - name: SDL2 (the distribution's is too old)
+        run: |
+          curl -sSfL https://github.com/libsdl-org/SDL/releases/download/release-$SDL/SDL2-$SDL.tar.gz | tar xz
+          cmake -S SDL2-$SDL -B sdl-build -DCMAKE_BUILD_TYPE=Release -DSDL_STATIC=OFF -DSDL_TEST=OFF
+          cmake --build sdl-build -j4 && sudo cmake --install sdl-build
       - name: Build
-        run: make -j4 ultracombo
+        run: |
+          make -j4 ultracombo
+          patchelf --set-rpath '$ORIGIN/lib' ultracombo
       - name: Zig for Linux
         run: |
           curl -sSfL https://ziglang.org/download/$ZIG/zig-x86_64-linux-$ZIG.tar.xz | tar xJ
@@ -65,6 +76,7 @@ jobs:
           out=ComboBreaker-Linux
           mkdir -p $out/run $out/tools $out/licenses
           cp ultracombo $out/combobreaker
+          mkdir -p $out/lib && cp -L /usr/local/lib/libSDL2-2.0.so.0 $out/lib/
           cp -r shaders $out/
           cp -r zig $out/tools/zig
           cp README.md $out/
