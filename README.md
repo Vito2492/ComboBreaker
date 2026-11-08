@@ -94,6 +94,23 @@ does not match. The optional `ki-l14.u98` (version L1.4, the original release
 with its infinite combos) is accepted too, but the console menu only runs on
 L1.5D; on L1.4 the game plays as the plain arcade game.
 
+## System requirements
+
+The game's own code runs natively, so almost any PC from the last ten years
+is enough. These are approximate:
+
+| | Minimum |
+|---|---|
+| System | Windows 10 or 11 (64-bit), or Linux x86-64 from about 2020 on (glibc 2.31) |
+| Processor | any 64-bit x86 processor with two cores |
+| Memory | 1 GB free (rewind keeps 256 MB of history by default; less in `ki1.ini`) |
+| Graphics | OpenGL 2.1 (the Lola Retro CRT shader needs OpenGL 3.3) |
+| Disk | about 300 MB for the program and its bundled compiler, plus about 100 MB of game files |
+| Controls | keyboard, or one or two gamepads (Xbox, PlayStation, Switch and most others) |
+
+The first time you play, the program builds the game's code for your PC,
+which takes about a minute, once. There is no macOS, Android or iOS version.
+
 ## Getting started (Windows)
 
 1. Download ComboBreaker from the Releases page and unzip it.
@@ -152,6 +169,10 @@ versión de consola y no cambia nada de cómo corre el juego.
 vida; Options con estrellas de dificultad y tabla de controles; pausa en
 cualquier momento; los códigos del SNES (escenario, velocidad, personaje al
 azar); la música de cada escenario.
+
+**Requisitos:** Windows 10/11 de 64 bits o Linux, casi cualquier PC de los
+últimos diez años, 1 GB de RAM libre, una placa de video con OpenGL 2.1 y unos
+400 MB de disco. La primera vez el programa tarda un minuto en prepararse.
 
 **Qué necesitás:** tus propios archivos del juego, obtenidos legalmente: el
 set `kinst` de MAME, versión L1.5D. Son 11 archivos: `ki-l15d.u98` (ROM de
