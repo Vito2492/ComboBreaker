@@ -561,7 +561,7 @@ static void roster_frame(uint32_t pr, unsigned mb, int ud, int lr)
     if (pr >> BTN_START & 1) {
         if (tn_named() < 2) { osd_message("Enter at least two players"); return; }
         tn_build_queue();
-        open_page(PAGE_NEXT, 0);
+        start_mode(MODE_TOURNAMENT);
     }
 }
 
@@ -656,7 +656,7 @@ static void return_to_menu(void)
     fprintf(stderr, "home: back to the menu (%s)\n", h.title_saved ? "title state" : "reset");
     if (h.title_saved && state_load_file(path)) {
         memset(h.prev, 0xff, sizeof h.prev);        // the button that chose this is still down
-        if (next) open_page(PAGE_NEXT, 0);
+        if (next) start_mode(MODE_TOURNAMENT);
         else if (h.practice_again) { h.practice_again = false; start_mode(MODE_PRACTICE); }
         else open_page(PAGE_MAIN, was == MODE_VS ? MAIN_VS : was == MODE_PRACTICE ? MAIN_PRACTICE : was == MODE_TOURNAMENT ? MAIN_TOURNAMENT : MAIN_ARCADE);
         return;
@@ -1036,9 +1036,40 @@ static void draw_practice_hud(uint32_t *ov)
     if ((h.anim++ / 40) % 2 == 0) text(ov, F_SMALL, 104, 8, "- PRESS START", C_ITEM, 255);
 }
 
+// Tournament: the SNES NEXT FIGHT screen, laid over the arcade's own
+// character screen (its fighters, names and countdown in the middle): the
+// two players' names and records on top, the line of players waiting below.
+static void draw_tournament_select(uint32_t *ov)
+{
+    if (tn.qn < 2) return;
+    for (int y = 0; y < 240; y++) {
+        if (y >= 40 && y < 194) continue;
+        unsigned a = y < 34 || y >= 200 ? 250 : y < 40 ? 250 - (unsigned)(y - 33) * 35 : 250 - (unsigned)(199 - y) * 35;
+        for (int x = 0; x < 320; x++) blend(&ov[y * 320 + x], 0x000000, a);
+    }
+    text_c(ov, F_BIG, 2, "NEXT FIGHT", C_GOLD, 255);
+    for (int side = 0; side < 2; side++) {
+        int who = tn.queue[side];
+        char b[24];
+        snprintf(b, sizeof b, "%s %02d/%02d", tn.name[who], tn.w[who] % 100, tn.l[who] % 100);
+        int x = side ? 312 - text_width(F_BODY, b) : 8;
+        text(ov, F_BODY, x, 22, b, C_ITEM, 255);
+    }
+    for (int k = 2; k < tn.qn; k++) {
+        int i = tn.queue[k], col = (k - 2) / 3, row = (k - 2) % 3;
+        char b[40];
+        snprintf(b, sizeof b, "%d: %-3s %02d/%02d", i + 1, tn.name[i], tn.w[i] % 100, tn.l[i] % 100);
+        text(ov, F_SMALL, col ? 170 : 16, 202 + row * 12, b, C_ITEM, 255);
+    }
+}
+
 void home_draw(uint32_t *ov)
 {
     if (!home_enabled()) return;
+    if (h.page == PAGE_CLOSED && h.mode == MODE_TOURNAMENT && in_game(0) && in_game(1) && !all_picked() && !h.starting) {
+        draw_tournament_select(ov);
+        return;
+    }
     if (h.page == PAGE_CLOSED && h.mode == MODE_PRACTICE && fighting()) { draw_practice_hud(ov); return; }
     if (h.page == PAGE_CLOSED) return;
     maybe_save_title();

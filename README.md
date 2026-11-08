@@ -27,8 +27,9 @@ again for the SNES menu:
 - **2 Player Game**: both players go straight to the character screen; after
   each match both come back to it, instead of the arcade's winner-stays-on.
 - **Tournament Game**: up to eight players with three-letter names and
-  win/loss records. The winner stays on and the loser goes to the back of the
-  line, with a NEXT FIGHT screen between matches.
+  win/loss records, and the SNES NEXT FIGHT screen laid over the arcade's own
+  character screen. The winner stays on and the loser goes to the back of the
+  line.
 - **Practice Game**: player 1 picks both fighters; the dummy stands still and
   nobody loses health. No health bars or clock, as on the SNES.
 - **Options**: difficulty (five stars), random select, timer, blood,
@@ -51,17 +52,47 @@ keyboard: Enter and Backspace. The gamepad's default layout is the SNES one:
 L Y X are weak, medium and fierce punch, R B A weak, medium and fierce kick.
 `home_menu = no` in `ki1.ini` gives the plain arcade game.
 
-## What you need
+## What you need: the game files
 
 **No game files are included, and none ever will be.** You need your own,
-legally obtained copy of the arcade game's files (MAME's `kinst` set):
+legally obtained copy of the arcade game's files: MAME's `kinst` set,
+version L1.5D. Eleven files, all with these exact names:
 
-- `ki-l15d.u98`: boot ROM, version L1.5D
-- `u10-l1` … `u13-l1`, `u33-l1` … `u36-l1`: sound ROMs
-- `kinst.chd`: the hard disk
+| File | What it is | Size | MD5 |
+|---|---|---|---|
+| `ki-l15d.u98` | boot ROM, version L1.5D | 524,288 bytes | `6a63e4bbdef8ea9f0d26f7244341ca08` |
+| `u10-l1` | sound ROM | 524,288 bytes | `9ee2b2cdda7ede8811a57507ef61e07b` |
+| `u11-l1` | sound ROM | 524,288 bytes | `bce2d8cd20e94d4406c19fd55d798946` |
+| `u12-l1` | sound ROM | 524,288 bytes | `14bb46cef4884f8df5df1fa985e6d3bf` |
+| `u13-l1` | sound ROM | 524,288 bytes | `ca0904ee517845eed5509426cf5d8560` |
+| `u33-l1` | sound ROM | 524,288 bytes | `da9e7f5f70320b51e6fdc23e9337484c` |
+| `u34-l1` | sound ROM | 524,288 bytes | `207395792342705bea307ecb321a95bf` |
+| `u35-l1` | sound ROM | 524,288 bytes | `a1758b43b42b32c25c770dc3ac7badc3` |
+| `u36-l1` | sound ROM | 524,288 bytes | `57b73bec5d0e8c90d8898e102ce4066b` |
+| `kinst.chd` | the hard disk (MAME CHD) | about 95 MB | SHA1 inside the CHD (`chdman info`): `81d833236e994528d1482979261401b198d1ca53` |
 
-The menu works with version L1.5D. The program checks your files against the
-known good dumps at startup.
+The CHD file's own MD5 depends on the chdman version that made it, so check
+the SHA1 that `chdman info -i kinst.chd` prints instead. A raw disk image
+(`kinst.raw`, from `chdman extractraw`) works too.
+
+Put them all in the `run` folder next to the program:
+
+```
+ComboBreaker/
+├── ComboBreaker.exe
+└── run/
+    ├── ki-l15d.u98
+    ├── u10-l1 … u13-l1
+    ├── u33-l1 … u36-l1
+    └── kinst.chd
+```
+
+A MAME zip of the set (`kinst.zip`, with `kinst/kinst.chd` beside it) can be
+opened directly instead: `ComboBreaker.exe path\to\kinst.zip`. At startup
+the program compares your files with the known good dumps and names any that
+does not match. The optional `ki-l14.u98` (version L1.4, the original release
+with its infinite combos) is accepted too, but the console menu only runs on
+L1.5D; on L1.4 the game plays as the plain arcade game.
 
 ## Getting started (Windows)
 
@@ -122,8 +153,11 @@ vida; Options con estrellas de dificultad y tabla de controles; pausa en
 cualquier momento; los códigos del SNES (escenario, velocidad, personaje al
 azar); la música de cada escenario.
 
-**Qué necesitás:** tus propios archivos del juego, obtenidos legalmente (set
-`kinst` de MAME, versión L1.5D). No se incluye ningún archivo del juego.
+**Qué necesitás:** tus propios archivos del juego, obtenidos legalmente: el
+set `kinst` de MAME, versión L1.5D. Son 11 archivos: `ki-l15d.u98` (ROM de
+arranque), las 8 ROMs de sonido `u10-l1` … `u13-l1` y `u33-l1` … `u36-l1`, y
+el disco `kinst.chd`. La tabla de arriba tiene sus tamaños y checksums para
+comprobar que sean los correctos. No se incluye ningún archivo del juego.
 Ponelos en la carpeta `run`, al lado de `ComboBreaker.exe`, y abrí el
 programa.
 
