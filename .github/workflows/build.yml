@@ -89,7 +89,7 @@ jobs:
         with: { name: ComboBreaker-Linux, path: ComboBreaker-Linux.tar.xz }
 
   macos:
-    runs-on: macos-14            # Apple silicon (arm64)
+    runs-on: macos-latest        # Apple silicon (arm64)
     steps:
       - uses: actions/checkout@v4
       - name: Tools
