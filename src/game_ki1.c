@@ -40,6 +40,9 @@ const game_t game_ki1 = {
     // the stage routine at 880004a8 (traced by hand)
     .stage_pool = 0xe4a4, .stage_last = 0x8dc28, .stage = 0x86238,
     .match_over = 0x86230, .title_timer = 0x8f2c0,
+    // set the frame the continue or high-score screen comes up, on a KO or a
+    // time-out alike (match_over stays 0 on a time-out); found by diffing RAM
+    .match_result = 0x86204,
     .music_set = 0x86240, .music = 0x86241,     // read at 880007a0, table at 8800e4d4
 
     // found by changing the difficulty in the game's operator menu (both versions)
