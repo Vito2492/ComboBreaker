@@ -107,6 +107,9 @@ jobs:
           cp ultracombo $out/combobreaker
           # carry SDL2 along and point the program at it
           dylibbundler -od -b -x $out/combobreaker -d $out/lib -p @executable_path/lib/
+          # Homebrew's sdl2 is sdl2-compat, which loads SDL3 at run time: ship that too
+          if [ -e "$(brew --prefix)/lib/libSDL3.0.dylib" ]; then cp -L "$(brew --prefix)/lib/libSDL3.0.dylib" $out/lib/; fi
+          ls -la $out/lib
           cp -r shaders $out/
           cp -r zig $out/tools/zig
           cp README.md $out/

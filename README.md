@@ -118,7 +118,7 @@ which takes about a minute, once.
 | macOS on Apple silicon (M1 and later) | `ComboBreaker-macOS.tar.xz` | **built, not tested on a Mac yet**: reports welcome |
 
 On macOS the program is not signed: the first time, right-click it and choose
-Open. There is no Android or iOS version yet.
+Open. If it does not start, `brew install sdl2` and try again. There is no Android or iOS version yet.
 
 ## Getting started
 
