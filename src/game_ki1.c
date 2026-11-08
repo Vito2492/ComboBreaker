@@ -5,8 +5,8 @@
 const game_t game_ki1 = {
     .id = "ki1",
     .title = "Killer Instinct",
-    .product = "UltraCombo",
-    .icon_text = "UC",
+    .product = "ComboBreaker",
+    .icon_text = "CB",
 
     .versions = { { "1.5d", "ki-l15d.u98", 0x7b65ca3d }, { "1.4", "ki-l14.u98", 0xafedb75f } },
     .sound_roms = { "u10-l1", "u11-l1", "u12-l1", "u13-l1",

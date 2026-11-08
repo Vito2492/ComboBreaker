@@ -1,0 +1,123 @@
+# Builds ComboBreaker for Windows, Linux and macOS on every push, and
+# attaches the packages to a release when a tag v* is pushed. The packages
+# hold the program, a Zig compiler (to build the game's code on the player's
+# machine at first launch), SDL2 and the shaders: no game files, no game code.
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+env:
+  ZIG: 0.14.1
+  SDL: 2.32.10
+
+jobs:
+  windows:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools
+        run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64 libsdl2-dev python3 zip
+      - name: SDL2 for MinGW
+        run: |
+          mkdir -p deps/sdl2-mingw && cd deps/sdl2-mingw
+          curl -sSfL https://github.com/libsdl-org/SDL/releases/download/release-$SDL/SDL2-devel-$SDL-mingw.tar.gz | tar xz
+      - name: Build
+        run: make -j4 ultracombo windows
+      - name: Zig for Windows
+        run: |
+          curl -sSfL -o zig.zip https://ziglang.org/download/$ZIG/zig-x86_64-windows-$ZIG.zip
+          unzip -q zig.zip && mv zig-x86_64-windows-$ZIG zig
+      - name: Package
+        run: |
+          out=ComboBreaker-Windows
+          mkdir -p $out/run $out/tools $out/licenses
+          cp dist/windows/UltraCombo.exe $out/ComboBreaker.exe
+          cp dist/windows/SDL2.dll $out/
+          cp -r shaders $out/
+          cp -r zig $out/tools/zig
+          cp README.md $out/
+          cp LICENSE $out/licenses/UltraCombo-ComboBreaker-LICENSE.txt
+          cp tools/fonts/OFL-PressStart2P.txt $out/licenses/
+          cp zig/LICENSE $out/licenses/Zig-LICENSE.txt
+          cp tools/run-readme.txt $out/run/PUT-GAME-FILES-HERE.txt
+          zip -qr9 ComboBreaker-Windows.zip $out
+      - uses: actions/upload-artifact@v4
+        with: { name: ComboBreaker-Windows, path: ComboBreaker-Windows.zip }
+
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools
+        run: sudo apt-get update && sudo apt-get install -y libsdl2-dev python3
+      - name: Build
+        run: make -j4 ultracombo
+      - name: Zig for Linux
+        run: |
+          curl -sSfL https://ziglang.org/download/$ZIG/zig-x86_64-linux-$ZIG.tar.xz | tar xJ
+          mv zig-x86_64-linux-$ZIG zig
+      - name: Package
+        run: |
+          out=ComboBreaker-Linux
+          mkdir -p $out/run $out/tools $out/licenses
+          cp ultracombo $out/combobreaker
+          cp -r shaders $out/
+          cp -r zig $out/tools/zig
+          cp README.md $out/
+          cp LICENSE $out/licenses/UltraCombo-ComboBreaker-LICENSE.txt
+          cp tools/fonts/OFL-PressStart2P.txt $out/licenses/
+          cp zig/LICENSE $out/licenses/Zig-LICENSE.txt
+          cp tools/run-readme.txt $out/run/PUT-GAME-FILES-HERE.txt
+          tar -cJf ComboBreaker-Linux.tar.xz $out
+      - uses: actions/upload-artifact@v4
+        with: { name: ComboBreaker-Linux, path: ComboBreaker-Linux.tar.xz }
+
+  macos:
+    runs-on: macos-14            # Apple silicon (arm64)
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools
+        run: brew install sdl2 pkg-config dylibbundler
+      - name: Build
+        run: make -j4 CC=clang ultracombo
+      - name: Zig for macOS
+        run: |
+          curl -sSfL https://ziglang.org/download/$ZIG/zig-aarch64-macos-$ZIG.tar.xz | tar xJ
+          mv zig-aarch64-macos-$ZIG zig
+      - name: Package
+        run: |
+          out=ComboBreaker-macOS
+          mkdir -p $out/run $out/tools $out/licenses $out/lib
+          cp ultracombo $out/combobreaker
+          # carry SDL2 along and point the program at it
+          dylibbundler -od -b -x $out/combobreaker -d $out/lib -p @executable_path/lib/
+          cp -r shaders $out/
+          cp -r zig $out/tools/zig
+          cp README.md $out/
+          cp LICENSE $out/licenses/UltraCombo-ComboBreaker-LICENSE.txt
+          cp tools/fonts/OFL-PressStart2P.txt $out/licenses/
+          cp zig/LICENSE $out/licenses/Zig-LICENSE.txt
+          cp tools/run-readme.txt $out/run/PUT-GAME-FILES-HERE.txt
+          tar -cJf ComboBreaker-macOS.tar.xz $out
+      - uses: actions/upload-artifact@v4
+        with: { name: ComboBreaker-macOS, path: ComboBreaker-macOS.tar.xz }
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, linux, macos]
+    runs-on: ubuntu-24.04
+    permissions: { contents: write }
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { merge-multiple: true }
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: |
+            ComboBreaker-Windows.zip
+            ComboBreaker-Linux.tar.xz
+            ComboBreaker-macOS.tar.xz
