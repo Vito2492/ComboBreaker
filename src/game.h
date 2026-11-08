@@ -71,9 +71,12 @@ typedef struct {
     // (an ultimate combo); read it once fight_scene has gone.
     uint32_t match_result;
     // non-zero while a fight's scene is up: from the round's start through
-    // the winner's moment (finishing move, ultimate, supreme victory), zero
-    // from the frame the screens after the match (continue, high scores) come up
+    // the winner's moment on the stage (finishing move, ultimate); zero from
+    // the victory screen (supreme or awesome victory, perfect) if there is
+    // one, else from the screens after the match (continue, high scores)
     uint32_t fight_scene;
+    // non-zero while the screens after a match (continue, high scores) are up
+    uint32_t after_match;
 
     // Operator adjustments on the disk: adj_len bytes at adj_data, the first
     // set once they were edited, with the game's checksum of them at adj_sum.

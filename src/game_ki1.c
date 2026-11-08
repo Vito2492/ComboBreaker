@@ -45,6 +45,9 @@ const game_t game_ki1 = {
     // continue or high-score screen comes up, on a KO or a time-out alike
     // (match_over stays 0 on a time-out). Found by diffing RAM.
     .match_result = 0x86204, .fight_scene = 0x884fd,
+    // set by the routine at 8802cf60 as the continue and high-score screens
+    // start (after the victory screen, when there is one), cleared at 8802d01c
+    .after_match = 0x40e50,
     .music_set = 0x86240, .music = 0x86241,     // read at 880007a0, table at 8800e4d4
 
     // found by changing the difficulty in the game's operator menu (both versions)
