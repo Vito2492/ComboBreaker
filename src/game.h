@@ -66,10 +66,14 @@ typedef struct {
     uint32_t music_set, music;
     uint32_t title_timer;       // 16 bits: frames until the title screen gives way to the attract loop
     uint32_t match_over;        // non-zero from a lost match through the continue countdown
-    // zero through a match and the winner's moment after it (finishing move,
-    // supreme victory, perfect); set as the screens after it (continue, high
-    // scores) come up: bit 0 player 1 won, bit 1 player 2
+    // the side that won a match: 1 player 1, 2 player 2, 0 a draw. Set when
+    // the game decides it, which can be well before the match's end shows
+    // (an ultimate combo); read it once fight_scene has gone.
     uint32_t match_result;
+    // non-zero while a fight's scene is up: from the round's start through
+    // the winner's moment (finishing move, ultimate, supreme victory), zero
+    // from the frame the screens after the match (continue, high scores) come up
+    uint32_t fight_scene;
 
     // Operator adjustments on the disk: adj_len bytes at adj_data, the first
     // set once they were edited, with the game's checksum of them at adj_sum.

@@ -278,9 +278,16 @@ static const char *pad_label(int button)
     return pad_button_name(SDL_GameControllerFromInstanceID(pad_prompt.last_pad), prompt_override(), button);
 }
 
+// A controller some drivers show twice (an 8BitDo, say, as an XInput pad and
+// again as a plain HID one) would drive both players. Found by watching both
+// pads report the same buttons; the second is then set aside.
+static SDL_JoystickID pad_ignored[4];
+static int pad_nignored;
+
 static void pad_added(int index)
 {
     SDL_JoystickID id = SDL_JoystickGetDeviceInstanceID(index);
+    for (int i = 0; i < pad_nignored; i++) if (pad_ignored[i] == id) return;
     for (int i = 0; i < MAX_PADS; i++)                      // already a player (startup scan + its event)
         if (pads[i] && SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(pads[i])) == id) return;
     for (int i = 0; i < MAX_PADS; i++) {
@@ -312,10 +319,36 @@ static bool pad_pressed(SDL_GameController *c, int b)
     return SDL_GameControllerGetButton(c, (SDL_GameControllerButton)b);
 }
 
+// Called with each player's pad buttons every time they are read: when the
+// two pads agree on nearly every frame either has something held, they are
+// one controller seen twice, and player 2's is dropped (another pad that is
+// connected takes its place).
+static void pad_mirror_check(const uint32_t pb[2])
+{
+    static int agree, total;
+    if (!pads[0] || !pads[1]) { agree = total = 0; return; }
+    if (!(pb[0] | pb[1])) return;
+    total++;
+    agree += pb[0] == pb[1];
+    if (total < 90) return;
+    bool mirror = agree * 10 >= total * 9;
+    agree = total = 0;
+    if (!mirror || pad_nignored == 4) return;
+    pad_ignored[pad_nignored++] = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(pads[1]));
+    fprintf(stderr, "pad: player 2's controller (%s) does what player 1's does: one controller seen twice, ignored\n",
+            SDL_GameControllerName(pads[1]));
+    osd_message("Player 2's controller was player 1's seen twice: ignored");
+    SDL_GameControllerClose(pads[1]);
+    pads[1] = NULL;
+    for (int i = 0; i < SDL_NumJoysticks(); i++)
+        if (SDL_IsGameController(i)) pad_added(i);
+}
+
 // Buttons held by each player this frame, one bit per BTN_*.
 static void read_players(uint32_t held[2])
 {
     const uint8_t *ks = SDL_GetKeyboardState(NULL);
+    uint32_t pb[2] = { 0, 0 };
     for (int p = 0; p < 2; p++) {
         held[p] = 0;
         for (int b = 0; b < NBUTTONS; b++)
@@ -323,14 +356,16 @@ static void read_players(uint32_t held[2])
         SDL_GameController *c = pads[p];
         if (!c) continue;
         for (int b = 0; b < NBUTTONS; b++)
-            if (pad_pressed(c, cfg.pad[b])) held[p] |= 1u << b;
+            if (pad_pressed(c, cfg.pad[b])) pb[p] |= 1u << b;
         int x = SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_LEFTX);
         int y = SDL_GameControllerGetAxis(c, SDL_CONTROLLER_AXIS_LEFTY);
-        if (y < -cfg.pad_deadzone) held[p] |= 1u << BTN_UP;
-        if (y > cfg.pad_deadzone) held[p] |= 1u << BTN_DOWN;
-        if (x < -cfg.pad_deadzone) held[p] |= 1u << BTN_LEFT;
-        if (x > cfg.pad_deadzone) held[p] |= 1u << BTN_RIGHT;
+        if (y < -cfg.pad_deadzone) pb[p] |= 1u << BTN_UP;
+        if (y > cfg.pad_deadzone) pb[p] |= 1u << BTN_DOWN;
+        if (x < -cfg.pad_deadzone) pb[p] |= 1u << BTN_LEFT;
+        if (x > cfg.pad_deadzone) pb[p] |= 1u << BTN_RIGHT;
+        held[p] |= pb[p];
     }
+    pad_mirror_check(pb);
     // SOCD cleaning: opposite directions together resolve the way fight sticks do
     for (int p = 0; p < 2 && cfg.socd; p++) {
         const uint32_t lr = 1u << BTN_LEFT | 1u << BTN_RIGHT, ud = 1u << BTN_UP | 1u << BTN_DOWN;

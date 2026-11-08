@@ -419,30 +419,41 @@ static void tn_build_queue(void)
 
 static int health_of(int p) { return ram2[game.health_p1 + (uint32_t)p * game.health_step]; }
 
-// The match is over once the game moves on from the fight to its own
-// screens after it (continue, high scores): that waits for the winner's
-// whole moment, finishing move, supreme victory or perfect included.
-// Returns the side that won, or -1 while the match goes on.
-static int match_won(void)
+// A match is over once the game moves on from the fight to its own screens
+// after it (continue, high scores): that waits for the winner's whole
+// moment, finishing move, ultimate, supreme victory or perfect included.
+static bool scene_up(void) { return ram2[game.fight_scene] != 0; }
+
+// The side that won the match just ended: the game's own record of it, or
+// on a draw the one with more health left.
+static int match_winner(void)
 {
-    if (!game.match_result) return -1;
     int r = ram2[game.match_result];
-    if (!r) return -1;
     if (r == 1 || r == 2) return r - 1;
-    int h0 = health_of(0), h1 = health_of(1);     // both or neither: by health
-    return h0 >= h1 ? 0 : 1;
+    return health_of(0) >= health_of(1) ? 0 : 1;
 }
 
 // Called each frame of a tournament match: when it ends, the winner stays
 // on and the loser goes to the back of the line, and the tournament moves on
 // to its next fight instead of the arcade's continue and high-score screens.
+// How each match ends, in the log (for reports of an ending cut short).
+static void match_log(void)
+{
+    static int pm = -1, pr = -1, ps = -1;
+    if (!game.match_over || !game.match_result || !game.fight_scene) return;
+    int m = ram2[game.match_over], r = ram2[game.match_result], sc = scene_up();
+    if (m != pm || r != pr || sc != ps)
+        fprintf(stderr, "home: frame %llu: match over %d, winner %d, fight scene %s\n",
+                (unsigned long long)frontend_frames(), m, r, sc ? "up" : "down");
+    pm = m; pr = r; ps = sc;
+}
+
 static void tn_frame(void)
 {
-    if (!game.match_result || !game.health_p1) return;
-    int won = match_won();
-    if (all_picked() && won < 0) { tn.armed = true; return; }
-    if (!tn.armed || won < 0) return;
-    tn.won = won;
+    if (!game.match_result || !game.fight_scene || !game.health_p1) return;
+    if (all_picked() && scene_up()) { tn.armed = true; return; }
+    if (!tn.armed || scene_up()) return;
+    tn.won = match_winner();
     tn.armed = false;
     if (tn.qn >= 2) {
         int winner = tn.queue[tn.won], loser = tn.queue[tn.won ^ 1];
@@ -811,9 +822,9 @@ void home_inputs(uint32_t held[2])
     // winner-stays-on and high-score screens. Only a match that ends in this
     // mode counts: the flag can still be set from an earlier game until the
     // next fight starts.
-    if ((h.mode == MODE_PRACTICE || h.mode == MODE_VS) && game.match_over && game.match_result) {
-        bool over = h.mode == MODE_VS ? match_won() >= 0 : ram2[game.match_over] != 0;
-        if (!over && fighting()) h.live = true;
+    if ((h.mode == MODE_PRACTICE || h.mode == MODE_VS) && game.match_over && game.fight_scene) {
+        bool over = h.mode == MODE_VS ? !scene_up() : ram2[game.match_over] != 0;
+        if (!over && fighting() && scene_up()) h.live = true;
         if (over && h.live && !h.starting) {
             h.live = false;
             h.again = h.mode;
@@ -836,6 +847,7 @@ void home_inputs(uint32_t held[2])
 
     if (h.mode != MODE_PRACTICE) random_frame(held, pressed);
     if (h.mode == MODE_VS || h.mode == MODE_PRACTICE || h.mode == MODE_TOURNAMENT) stage_frame(held);
+    if (h.mode == MODE_VS || h.mode == MODE_TOURNAMENT) match_log();
     if (h.mode == MODE_TOURNAMENT) tn_frame();
     if (h.mode == MODE_VS || h.mode == MODE_PRACTICE || h.mode == MODE_TOURNAMENT) music_frame();
     if (h.mode != MODE_NONE) speed_frame(held);
