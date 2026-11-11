@@ -211,6 +211,9 @@ static bool run_all(cmd_t *cmds, int n, int parallel, const char *log, void (*ti
     }
     for (int i = 0; i < nrun; i++) { WaitForSingleObject(running[i], INFINITE); CloseHandle(running[i]); }
     if (out != INVALID_HANDLE_VALUE) CloseHandle(out);
+#elif defined __ANDROID__
+    (void)next; (void)done; (void)log; (void)tick;
+    ok = false;                     // a phone has no compiler to run (TinyCC is a library)
 #else
     pid_t running[MAX_JOBS];
     int nrun = 0;
