@@ -4,6 +4,7 @@
 // go where), so emulation stays exactly the arcade's.
 #pragma once
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 // Rewrite this frame's inputs (bits per BTN_*): menu navigation, the Start
@@ -22,6 +23,17 @@ bool home_enabled(void);
 double home_speed(void);
 // The machine was reset or a state was loaded: forget any mode in progress.
 void home_reset(void);
+
+// Online (netplay): the console's 2 Player game, run on both sides from
+// both players' inputs as part of the emulation (machine_run_inputs), with
+// its state in the machine's (state.c), so rollback covers it. No menu, no
+// pause, no speed codes; after each match both pick again.
+void home_net(bool on);
+bool home_net_active(void);
+// The home menu's state, for the machine's own (online only): size, save, load.
+size_t home_state(uint8_t *buf, bool load);
+// Your Options > CONTROLS layout on your own input, before it is sent.
+void home_remap_local(uint32_t *held);
 
 // Provided by the frontend.
 void frontend_open_controls(void);      // the external menu's Controls page

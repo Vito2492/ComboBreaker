@@ -7,6 +7,7 @@
 #include "mem.h"
 #include "rec.h"
 #include "sound.h"
+#include "home.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,7 +19,8 @@
 
 static uint8_t *mirror;             // every page as of the last checkpoint
 static uint8_t *core, *core_tmp;    // non-paged state at the last checkpoint
-static size_t core_len;
+static size_t core_len, core_cap;
+static bool with_home;              // the home menu's state is part of the core (online)
 
 static uint8_t *page_ptr(int g)
 {
@@ -42,6 +44,7 @@ static size_t core_io(uint8_t *buf, bool load)
     n += ide_state(buf ? buf + n : NULL, load);
     n += sound_state(buf ? buf + n : NULL, load);
     n += machine_state(buf ? buf + n : NULL, load);
+    if (with_home) n += home_state(buf ? buf + n : NULL, load);
     return n;
 }
 
@@ -142,12 +145,15 @@ size_t state_history_bytes(void) { return hist_bytes; }
 
 void state_init(void)
 {
+    with_home = home_net_active();      // decided here, so the core keeps one size
     core_len = core_io(NULL, false);
-    if (!mirror) {
-        mirror = malloc((size_t)NPAGES * PAGE);
+    if (!mirror) mirror = malloc((size_t)NPAGES * PAGE);
+    if (core_len > core_cap) {
+        free(core); free(core_tmp); free(scratch);
         core = malloc(core_len);
         core_tmp = malloc(core_len);
         scratch = malloc(sizeof(entry_t) + core_len + (size_t)NPAGES * (PAGE + 16));
+        core_cap = core_len;
     }
     for (int g = 0; g < NPAGES; g++) { memcpy(mirror + (size_t)g * PAGE, page_ptr(g), PAGE); *dirty_flag(g) = 0; }
     core_io(core, false);
@@ -233,6 +239,39 @@ bool state_rewind(void)
     for (int g = 0; g < NPAGES; g++) *dirty_flag(g) = 0;
     core_io(core, true);
     return true;
+}
+
+/* ---------------------------------------------------------------- */
+/* Snapshots in memory (online: the title screen to come back to)     */
+/* ---------------------------------------------------------------- */
+
+// Unlike a state file, putting a snapshot back is an ordinary change to the
+// machine: the next checkpoint records it, so rewind and rollback go back
+// across it. The frame counter keeps counting on.
+size_t state_snapshot_size(void) { return core_len + (size_t)NPAGES * PAGE; }
+
+void state_snapshot_take(uint8_t *buf)
+{
+    core_io(buf, false);
+    for (int g = 0; g < (int)NPAGES; g++) memcpy(buf + core_len + (size_t)g * PAGE, page_ptr(g), PAGE);
+}
+
+void state_snapshot_put(const uint8_t *buf)
+{
+    uint64_t frame = machine_frame();
+    for (int g = 0; g < (int)NPAGES; g++) {
+        const uint8_t *src = buf + core_len + (size_t)g * PAGE;
+        if (!memcmp(page_ptr(g), src, PAGE)) continue;
+        memcpy(page_ptr(g), src, PAGE);
+        *dirty_flag(g) = 1;
+    }
+    rec_forget();
+    ide_tracked_changed();
+    // the machine as it was; the home menu's own state carries on
+    memcpy(core_tmp, buf, core_len);
+    if (with_home) home_state(core_tmp + core_len - home_state(NULL, false), false);
+    core_io(core_tmp, true);
+    machine_set_frame(frame);
 }
 
 /* ---------------------------------------------------------------- */

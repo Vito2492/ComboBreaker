@@ -120,11 +120,13 @@ static bool playing(void) { return in_game(0) || in_game(1); }
 static bool all_picked(void) { return in_game(0) && picked(0) && (!in_game(1) || picked(1)); }
 static bool fighting(void) { return all_picked() && game_health(0) >= 0; }
 
+static bool net;               // online: everything here must come out the same on both sides
+
 bool home_enabled(void)
 {
     // the RAM locations were found in the default version (L1.5D for
     // UltraCombo); a ROM given by path is taken to be that one
-    return cfg.home_menu && game.attract && game.in_game && game.picked && machine_version() <= 0;
+    return (cfg.home_menu || net) && game.attract && game.in_game && game.picked && machine_version() <= 0;
 }
 
 /* ---------------------------------------------------------------- */
@@ -157,6 +159,8 @@ static struct {
     uint8_t pool[32], last;     // the game's own values, put back afterwards
     bool was_picked[2];
     int first_code;             // the first picker's code, -1 none
+    uint32_t hist[2][8];        // the last frames' buttons (a pick shows a frame late)
+    unsigned at;
 } stg = { .want = -1, .first_code = -1 };
 
 static void poke(uint32_t off, uint8_t v)
@@ -196,13 +200,11 @@ static void stage_frame(uint32_t held[2])
 {
     if (!game.stage_pool) return;
     // the game shows a pick the frame after the press: look at the last few frames
-    static uint32_t hist[2][8];
-    static unsigned at;
     uint32_t recent[2] = { 0, 0 };
-    at = (at + 1) % 8;
+    stg.at = (stg.at + 1) % 8;
     for (int p = 0; p < 2; p++) {
-        hist[p][at] = held[p];
-        for (int i = 0; i < 8; i++) recent[p] |= hist[p][i];
+        stg.hist[p][stg.at] = held[p];
+        for (int i = 0; i < 8; i++) recent[p] |= stg.hist[p][i];
     }
     // The arcade has stage codes of its own (a direction held on the pick),
     // mapped differently: the direction stays ours until a fighter is picked.
@@ -292,7 +294,7 @@ static struct {
 // The cursor is moved a random number of places, then the fighter is
 // picked, all with the player's own inputs.
 static struct { int steps[2], t[2], wait[2]; uint32_t seed; } rnd;
-static uint32_t rnd_ticks(void) { static uint32_t n; return ++n * 2654435761u ^ (uint32_t)clock(); }
+static uint32_t rnd_ticks(void) { static uint32_t n; return net ? 0 : ++n * 2654435761u ^ (uint32_t)clock(); }
 
 static void random_frame(uint32_t held[2], const uint32_t pressed[2])
 {
@@ -300,7 +302,7 @@ static void random_frame(uint32_t held[2], const uint32_t pressed[2])
     for (int p = 0; p < 2; p++) {
         if (!in_game(p) || picked(p)) { rnd.steps[p] = rnd.t[p] = rnd.wait[p] = 0; continue; }
         // Options > RANDOM SELECT: every human player's fighter is drawn
-        bool always = cfg.home_random && ++rnd.wait[p] == 45;
+        bool always = cfg.home_random && !net && ++rnd.wait[p] == 45;
         if (!rnd.steps[p] && (always || (pressed[p] >> BTN_START & 1 && held[p] >> BTN_UP & 1))) {
             rnd.steps[p] = 1 + (int)(rnd.seed >> 16) % 10;
             rnd.t[p] = 0;
@@ -381,6 +383,7 @@ static void speed_frame(const uint32_t held[2])
 
 double home_speed(void)
 {
+    if (net) return 1;
     return home_enabled() && h.mode != MODE_NONE && fighting() && h.page == PAGE_CLOSED ? spd.speed : 1;
 }
 
@@ -736,22 +739,30 @@ static int letter_slot(char c)
     return p && c ? (int)(p - pad_letters) : -1;
 }
 
+static uint32_t remap_one(uint32_t in, int col)
+{
+    uint32_t out = in & ~0x3fu;
+    for (int a = 0; a < 6; a++) {
+        int slot = letter_slot(cfg.home_pad[col][a]);
+        if (slot < 0) slot = a;
+        if (in >> slot & 1) out |= 1u << a;
+    }
+    return out;
+}
+
 static void remap(uint32_t held[2])
 {
-    for (int p = 0; p < 2; p++) {
-        uint32_t in = held[p], out = in & ~0x3fu;
-        for (int a = 0; a < 6; a++) {
-            int slot = letter_slot(cfg.home_pad[p][a]);
-            if (slot < 0) slot = a;
-            if (in >> slot & 1) out |= 1u << a;
-        }
-        held[p] = out;
-    }
+    for (int p = 0; p < 2; p++) held[p] = remap_one(held[p], p);
 }
+
+void home_remap_local(uint32_t *held) { *held = remap_one(*held, 0); }
+
+static void net_frame(uint32_t held[2]);
 
 void home_inputs(uint32_t held[2])
 {
     if (!home_enabled()) return;
+    if (net) { net_frame(held); return; }
     if (h.restore || tn.next) { h.restore = false; return_to_menu(); held[0] = held[1] = 0; return; }
     training_timer_off = !cfg.home_timer && h.mode != MODE_NONE;
 
@@ -898,6 +909,96 @@ void home_inputs(uint32_t held[2])
             break;
         }
     }
+}
+
+/* ---------------------------------------------------------------- */
+/* Online: the 2 Player game on both sides                            */
+/* ---------------------------------------------------------------- */
+
+// Each side runs this from the same inputs, frame by frame, so it may only
+// depend on them, on the machine and on its own state (saved with the
+// machine's, home_state). The title screen to come back to after each
+// match is a snapshot in memory: putting it back is an ordinary change to
+// the machine, which rollback can cross (a state file would cut its history).
+static struct {
+    int phase;                  // 0 to the title screen, 1 playing
+    int wait;                   // frames on the title screen
+} nf;
+static uint8_t *net_title;      // the snapshot (the same on both sides)
+
+void home_net(bool on)
+{
+    net = on;
+    home_reset();
+    // both sides start from the same state, whatever their menus were doing
+    memset(&h, 0, sizeof h);
+    memset(&stg, 0, sizeof stg);
+    stg.want = stg.first_code = -1;
+    memset(&rnd, 0, sizeof rnd);
+    mus.before = -1; mus.done = false;
+    spd.speed = 1; spd.chosen = false; spd.since = 0;
+    memset(&nf, 0, sizeof nf);
+    if (!on) { free(net_title); net_title = NULL; }
+}
+
+bool home_net_active(void) { return net; }
+
+size_t home_state(uint8_t *buf, bool load)
+{
+    // plain data only (no pointers): the same bytes on both sides
+#define HS(x) if (buf && load) memcpy(&(x), buf + n, sizeof (x)); else if (buf) memcpy(buf + n, &(x), sizeof (x)); n += sizeof (x);
+    size_t n = 0;
+    HS(h) HS(stg) HS(rnd) HS(mus) HS(spd) HS(nf)
+#undef HS
+    return n;
+}
+
+static void net_frame(uint32_t held[2])
+{
+    if (h.restore) {                    // a match ended: both pick again
+        h.restore = false;
+        if (net_title) state_snapshot_put(net_title);
+        fprintf(stderr, "home: online: frame %llu, match over: both pick again\n", (unsigned long long)machine_frame());
+        home_reset();
+        start_mode(MODE_VS);
+        memset(h.prev, 0xff, sizeof h.prev);
+        held[0] = held[1] = 0;
+        return;
+    }
+    if (nf.phase == 0) {
+        // from the boot to the title screen, then the snapshot, then the game
+        held[0] = held[1] = 0;
+        if (h.cool > 0) h.cool--;
+        if (in_attract()) { nf.wait = 0; if (h.press == 0 && h.cool == 0) { h.press = 4; h.press_player = 0; h.cool = 40; } }
+        else if (!playing() && h.press == 0 && ++nf.wait > 30) {
+            if (!net_title) net_title = malloc(state_snapshot_size());
+            if (net_title) state_snapshot_take(net_title);
+            nf.phase = 1;
+            fprintf(stderr, "home: online: frame %llu, title screen kept, 2 Player game\n", (unsigned long long)machine_frame());
+            start_mode(MODE_VS);
+        }
+        if (h.press > 0) { held[h.press_player] |= 1u << BTN_START; h.press--; }
+        return;
+    }
+    uint32_t pressed[2] = { held[0] & ~h.prev[0], held[1] & ~h.prev[1] };
+    h.prev[0] = held[0];
+    h.prev[1] = held[1];
+    if (h.starting) {
+        held[0] &= ~(1u << BTN_START);
+        held[1] &= ~(1u << BTN_START);
+        if (h.press == 0 && --h.seq_wait <= 0) {
+            if (!in_game(0)) { h.press = 4; h.press_player = 0; h.seq_wait = 20; }
+            else if (!in_game(1)) { h.press = 4; h.press_player = 1; h.seq_wait = 20; }
+            else { h.starting = false; fprintf(stderr, "home: online: frame %llu, both players in\n", (unsigned long long)machine_frame()); }
+        }
+    }
+    // the match is over (or the game is, somehow): both pick again
+    if (!h.starting && (match_ended(&h.vs_end) || !playing())) h.restore = true;
+    if (h.press > 0) { held[h.press_player] |= 1u << BTN_START; h.press--; }
+    random_frame(held, pressed);
+    stage_frame(held);
+    match_log();
+    music_frame();
 }
 
 // The menu shows a few frames after the title was asked for: save it then.

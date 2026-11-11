@@ -1460,6 +1460,7 @@ static uint16_t netplay_input(void)
     int me = netplay_local_player();
     uint32_t h[2] = { 0, 0 };
     h[me] = held[0] | held[1];
+    home_remap_local(&h[me]);           // your Options > CONTROLS, on your side
     auto_coin(h);
     return (uint16_t)(h[me] & 0x0fff);
 }
@@ -1617,7 +1618,7 @@ int frontend_main(void)
             else SDL_Delay(16);
             continue;
         }
-        if (was_netplay) { was_netplay = false; choose_pacing(); apply_rewind_setting(); hw.dsw = config_dsw(); }
+        if (was_netplay) { was_netplay = false; home_net(false); choose_pacing(); apply_rewind_setting(); hw.dsw = config_dsw(); }
         if (netplay_active()) {                        // connecting: keep playing locally meanwhile
             netplay_update(0);
             if (netplay_running()) continue;           // the session just reset the machine: no local frame

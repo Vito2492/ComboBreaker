@@ -33,6 +33,7 @@
 #include "rec_build.h"
 #include "game.h"
 #include "training.h"
+#include "home.h"
 #ifdef __ANDROID__
 #include "android.h"
 #endif
@@ -269,6 +270,7 @@ static struct {
 #define sound_acc m.sound_acc
 
 uint64_t machine_frame(void) { return m.frame; }
+void machine_set_frame(uint64_t f) { m.frame = f; }
 
 size_t machine_state(uint8_t *buf, bool load)
 {
@@ -382,8 +384,12 @@ static void apply_script(int frame)
 /* Netplay callbacks shared with the frontend: emulate with explicit inputs. */
 void machine_run_inputs(const uint16_t in[2], bool resim)
 {
-    hw.p1 = 0xffffffffu & ~(uint32_t)(in[0] & 0x0fff);
-    hw.p2 = 0xffffffffu & ~(uint32_t)(in[1] & 0x0fff);
+    // online, the console menu's 2 Player game runs on both sides, from the
+    // inputs both sides have: part of the emulation
+    uint32_t held[2] = { in[0] & 0x0fffu, in[1] & 0x0fffu };
+    if (home_net_active()) home_inputs(held);
+    hw.p1 = 0xffffffffu & ~(held[0] & 0x0fffu);
+    hw.p2 = 0xffffffffu & ~(held[1] & 0x0fffu);
     run_frame();
     static int desync_at = -1;                      // testing: KI2_DESYNC_AT=frame breaks this side
     if (desync_at < 0) desync_at = getenv("KI2_DESYNC_AT") ? atoi(getenv("KI2_DESYNC_AT")) : 0;
@@ -394,6 +400,7 @@ void machine_run_inputs(const uint16_t in[2], bool resim)
 
 void machine_netplay_reset(void)
 {
+    home_net(true);                 // before the machine's state takes its shape
     machine_reset();
     for (int i = 0; i < NP_BOOT_FRAMES; i++) {
         hw.p1 = hw.p2 = 0xffffffffu;

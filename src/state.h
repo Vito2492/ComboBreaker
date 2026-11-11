@@ -24,6 +24,13 @@ bool state_rewind(void);
 double state_history_seconds(void);
 size_t state_history_bytes(void);
 
+// A snapshot of the whole machine in memory (state_snapshot_size bytes).
+// Putting it back is recorded like any frame's changes, so rollback and
+// rewind can cross it (state_load_file clears them).
+size_t state_snapshot_size(void);
+void state_snapshot_take(uint8_t *buf);
+void state_snapshot_put(const uint8_t *buf);
+
 bool state_save_file(const char *path);
 bool state_load_file(const char *path);   // also clears the rewind history
 
