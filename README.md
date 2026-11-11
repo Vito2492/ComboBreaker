@@ -118,9 +118,10 @@ which takes about a minute, once.
 | Windows 10/11 (64-bit) | `ComboBreaker-Windows.zip` | tested |
 | Linux x86-64 | `ComboBreaker-Linux.tar.xz` | built and tested in the cloud |
 | macOS on Apple silicon (M1 and later) | `ComboBreaker-macOS.tar.xz` | **built, not tested on a Mac yet**: reports welcome |
+| Android 7 or later (64-bit) | `ComboBreaker-Android.apk` | **new, being tested**: see the [guide](docs/GUIDE.md#7-android) |
 
 On macOS the program is not signed: the first time, right-click it and choose
-Open. If it does not start, `brew install sdl2` and try again. There is no Android or iOS version yet.
+Open. If it does not start, `brew install sdl2` and try again. On Android the app asks for the folder holding your game files the first time and copies them in; on-screen controls show when no pad is connected. There is no iOS version.
 
 ## Getting started
 
@@ -159,6 +160,8 @@ how each was found.
   [Press Start 2P](https://fonts.google.com/specimen/Press+Start+2P) by
   CodeMan38, SIL Open Font Licence (`tools/fonts/OFL-PressStart2P.txt`).
 - Bundled shaders and libraries keep their own licences (see the manual).
+- The Android app carries [TinyCC](https://github.com/TinyCC/tinycc) (LGPL)
+  as `libtcc.so`, to build the game's code on the phone, and SDL2 (zlib).
 
 Killer Instinct is a trademark of its owners. This is a fan project, not
 affiliated with them. The game, its code and its data belong to their owners.
@@ -188,7 +191,7 @@ vida; Options con estrellas de dificultad y tabla de controles; pausa en
 cualquier momento; los códigos del SNES (escenario, velocidad, personaje al
 azar); la música de cada escenario.
 
-**Requisitos:** Windows 10/11 de 64 bits o Linux, casi cualquier PC de los
+**Requisitos:** Windows 10/11 de 64 bits, Linux, Mac con procesador Apple o Android 7 (64 bits), casi cualquier PC de los
 últimos diez años, 1 GB de RAM libre, una placa de video con OpenGL 2.1 y unos
 400 MB de disco. La primera vez el programa tarda un minuto en prepararse.
 

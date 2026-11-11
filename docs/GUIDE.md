@@ -164,7 +164,28 @@ in `ki1.ini`.
 
 ## 7. Android
 
-There is no Android version yet: it's on its way. It will work like the PC
-version, with no game files included: you'll pick your own files on the
-phone the first time. A gamepad is recommended; on-screen controls will be
-there as an option.
+**New, still being tested:** it may have problems on some phones. Please
+report them on GitHub.
+
+1. Download `ComboBreaker-Android.apk` from
+   [Releases](https://github.com/Vito2492/ComboBreaker/releases) on the phone
+   and open it. Android asks to allow installing apps from that source (the
+   browser or the file manager): allow it.
+2. Copy your ten game files (or your MAME `kinst.zip`) to a folder on the
+   phone, for example `Download/kinst`.
+3. Open ComboBreaker. The first time it asks for the folder: tap *Choose
+   folder*, pick that folder and tap *Use this folder*. The app copies the
+   files into its own folder
+   (`Android/data/io.github.vito2492.combobreaker/files/run`) and won't ask
+   again.
+4. The first game takes a little longer while it prepares the game for the
+   phone.
+
+**Controls:** a Bluetooth or USB gamepad is recommended (Xbox, PlayStation,
+8BitDo and most others work). Without one, on-screen controls in the Super
+Nintendo layout show: d-pad and Start on the left, Y X A B and L R on the
+right. The corner button, or the phone's Back button, opens the program's
+menu. `touch_controls` in `ki1.ini` (`auto`, `on`, `off`) turns them off or
+keeps them on.
+
+Android 7 or later, 64-bit. The APK includes no game files.

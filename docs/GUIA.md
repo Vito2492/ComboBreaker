@@ -173,7 +173,28 @@ Si preferís el arcade puro, sin los menús de la consola, poné
 
 ## 7. Android
 
-Todavía no hay versión para Android: está en camino. Va a funcionar igual que
-en la PC, sin archivos del juego incluidos: vas a elegir tus archivos desde
-el teléfono la primera vez. Se recomienda un joystick, aunque va a tener
-controles en pantalla opcionales.
+**Versión nueva, todavía en prueba:** puede tener problemas en algunos
+teléfonos. Si te pasa algo, contalo en GitHub.
+
+1. Bajá `ComboBreaker-Android.apk` desde
+   [Releases](https://github.com/Vito2492/ComboBreaker/releases) en el teléfono
+   y abrilo. Android te va a pedir permiso para instalar apps de esa fuente
+   (el navegador o el administrador de archivos): aceptalo.
+2. Copiá tus 10 archivos del juego (o tu `kinst.zip` de MAME) a una carpeta
+   del teléfono, por ejemplo `Descargas/kinst`.
+3. Abrí ComboBreaker. La primera vez te pide la carpeta: tocá *Choose
+   folder*, elegí esa carpeta y tocá *Usar esta carpeta*. La app copia los
+   archivos a su carpeta (`Android/data/io.github.vito2492.combobreaker/files/run`)
+   y ya no los vuelve a pedir.
+4. La primera partida tarda un poco más mientras prepara el juego para el
+   teléfono.
+
+**Controles:** se recomienda un joystick Bluetooth o USB (los de Xbox,
+PlayStation, 8BitDo y la mayoría funcionan). Sin joystick aparecen controles
+en pantalla con la distribución de la Super Nintendo: cruz y Start a la
+izquierda, Y X A B y L R a la derecha. El botón de la esquina, o el botón
+Atrás del teléfono, abre el menú del programa. Se pueden apagar o dejar
+siempre puestos con `touch_controls` (`auto`, `on`, `off`) en `ki1.ini`.
+
+Se necesita Android 7 o posterior, de 64 bits. El APK no trae ningún archivo
+del juego.
