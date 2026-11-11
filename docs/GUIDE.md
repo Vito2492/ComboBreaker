@@ -30,8 +30,7 @@ too: see step 3.
 1. Go to the [Releases](https://github.com/Vito2492/ComboBreaker/releases)
    page and download your system's package:
    - Windows: `ComboBreaker-Windows.zip`
-   - Linux (Steam Deck too): `ComboBreaker-Linux.tar.xz` (**not tested** on
-     a real machine yet: reports welcome)
+   - Linux (Steam Deck too): `ComboBreaker-Linux.tar.xz`
    - Mac: `ComboBreaker-macOS.tar.xz` (**not tested** on a Mac yet: reports
      welcome)
    - Android: see section 7.

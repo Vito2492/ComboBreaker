@@ -32,8 +32,7 @@ Si tienes el set como un `kinst.zip` de MAME (con la carpeta `kinst` y el
    [Releases](https://github.com/Vito2492/ComboBreaker/releases) y descarga el
    paquete de tu sistema:
    - Windows: `ComboBreaker-Windows.zip`
-   - Linux (también Steam Deck): `ComboBreaker-Linux.tar.xz` (todavía **no
-     probado** en una máquina real: si lo pruebas, cuéntanos cómo te fue)
+   - Linux (también Steam Deck): `ComboBreaker-Linux.tar.xz`
    - Mac: `ComboBreaker-macOS.tar.xz` (todavía **no probado** en una Mac:
      si lo pruebas, cuéntanos cómo te fue)
    - Android: ver la sección 7.

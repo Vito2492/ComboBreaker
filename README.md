@@ -126,7 +126,7 @@ which takes about a minute, once.
 | Platform | Package | State |
 |---|---|---|
 | Windows 10/11 (64-bit) | `ComboBreaker-Windows.zip` | tested |
-| Linux x86-64 (Steam Deck too) | `ComboBreaker-Linux.tar.xz` | **built, not tested on a real machine yet**: reports welcome |
+| Linux x86-64 (Steam Deck too) | `ComboBreaker-Linux.tar.xz` | tested on a Steam Deck |
 | macOS on Apple silicon (M1 and later) | `ComboBreaker-macOS.tar.xz` | **built, not tested on a Mac yet**: reports welcome |
 | Android 7 or later (64-bit) | `ComboBreaker-Android.apk` | tested on a phone: see the [guide](docs/GUIDE.md#7-android) |
 
@@ -272,7 +272,7 @@ computadora: tarda alrededor de un minuto, una sola vez.
 | Sistema | Paquete | Estado |
 |---|---|---|
 | Windows 10/11 (64 bits) | `ComboBreaker-Windows.zip` | probado |
-| Linux x86-64 (también Steam Deck) | `ComboBreaker-Linux.tar.xz` | **compilado, todavía sin probar en una máquina real** |
+| Linux x86-64 (también Steam Deck) | `ComboBreaker-Linux.tar.xz` | probado en una Steam Deck |
 | macOS con procesador Apple (M1 o posterior) | `ComboBreaker-macOS.tar.xz` | **compilado, todavía sin probar en una Mac** |
 | Android 7 o posterior (64 bits) | `ComboBreaker-Android.apk` | probado en un teléfono |
 
