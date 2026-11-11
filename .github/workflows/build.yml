@@ -173,8 +173,9 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           ndk=$(sed -n 's/^Pkg.Revision *= *//p' $ANDROID_NDK_HOME/source.properties)
+          v=${{ inputs.release_tag || github.ref_name }}
           cd android
-          gradle --no-daemon assembleRelease -PndkVersion=$ndk -PversionCode=${{ github.run_number }} -PversionName=${GITHUB_REF_NAME#v}
+          gradle --no-daemon assembleRelease -PndkVersion=$ndk -PversionCode=${{ github.run_number }} -PversionName=${v#v}
           cp app/build/outputs/apk/release/app-release.apk ../ComboBreaker-Android.apk
       - uses: actions/upload-artifact@v4
         with: { name: ComboBreaker-Android, path: ComboBreaker-Android.apk }
