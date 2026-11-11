@@ -1,5 +1,6 @@
 package io.github.vito2492.combobreaker;
 
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
@@ -31,7 +32,7 @@ public class ComboBreakerActivity extends SDLActivity {
         "u10-l1", "u11-l1", "u12-l1", "u13-l1", "u33-l1", "u34-l1", "u35-l1", "u36-l1",
         "kinst.chd", "kinst.raw"));
 
-    // 0 choosing or copying, 1 copied, 2 cancelled, 3 failed (read from C)
+    // 0 asking, choosing or copying, 1 copied, 2 cancelled, 3 failed, 4 quit (read from C)
     private static volatile int pickState = 1;
     private int copied;
 
@@ -40,16 +41,24 @@ public class ComboBreakerActivity extends SDLActivity {
         return new String[] { "SDL2", "main" };
     }
 
-    /** Called from C: open the system's folder chooser. */
-    public void pickGameFiles() {
+    /** Called from C: explain what's needed, then open the system's folder chooser. */
+    public void askGameFiles(final String text) {
         pickState = 0;
-        runOnUiThread(() -> {
-            try {
-                startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), PICK_FOLDER);
-            } catch (Exception e) {
-                pickState = 3;
-            }
-        });
+        runOnUiThread(() -> new AlertDialog.Builder(this)
+            .setTitle("ComboBreaker")
+            .setMessage(text)
+            .setCancelable(false)
+            .setPositiveButton("Choose folder", (d, w) -> openPicker())
+            .setNegativeButton("Quit", (d, w) -> pickState = 4)
+            .show());
+    }
+
+    private void openPicker() {
+        try {
+            startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), PICK_FOLDER);
+        } catch (Exception e) {
+            pickState = 3;
+        }
     }
 
     /** Called from C, while it waits. */
