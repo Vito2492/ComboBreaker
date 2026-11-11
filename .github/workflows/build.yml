@@ -15,6 +15,7 @@ on:
 env:
   ZIG: 0.14.1
   SDL: 2.32.10
+  TCC: aade7bafb59641660bc9a0e21ad0a9a4a1ed346e   # TinyCC (mob), for Android
 
 jobs:
   windows:
@@ -139,6 +140,18 @@ jobs:
         run: curl -sSfL https://github.com/libsdl-org/SDL/releases/download/release-$SDL/SDL2-$SDL.tar.gz | tar xz
       - name: Prepare
         run: sh tools/android-prepare.sh SDL2-$SDL ./ultracombo
+      - name: TinyCC for the phone (builds the game's code there, LGPL, loaded as libtcc.so)
+        run: |
+          git clone -q https://github.com/TinyCC/tinycc.git && cd tinycc && git checkout -q $TCC
+          ./configure >/dev/null && make tccdefs_.h
+          bin=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
+          for t in arm64-v8a:aarch64:ARM64 x86_64:x86_64:X86_64; do
+            abi=${t%%:*}; rest=${t#*:}; triple=${rest%%:*}; target=${rest#*:}
+            mkdir -p ../android/app/src/main/jniLibs/$abi
+            $bin/$triple-linux-android24-clang -shared -fPIC -O2 -w -DONE_SOURCE=1 -DTCC_TARGET_$target=1 \
+              -DTARGETOS_ANDROID=1 -DCONFIG_TRIPLET="\"$triple-linux-android\"" -I. libtcc.c \
+              -o ../android/app/src/main/jniLibs/$abi/libtcc.so -lm -ldl
+          done
       - name: Signing key
         env: { KEY: '${{ secrets.ANDROID_KEYSTORE_B64 }}' }
         run: |

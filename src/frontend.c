@@ -1409,7 +1409,7 @@ static void emulate_frame(void)
     training_apply(true);
     run_frame();
     state_checkpoint();
-    frame_count++;
+    if (++frame_count >= 600) rec_build_trial_passed();
     rumble_check();
     perf_emu(t0);
 }

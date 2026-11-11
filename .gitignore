@@ -31,3 +31,4 @@ ki1.ini
 /android/app/build/
 /android/app/.cxx/
 /android/local.properties
+/android/app/src/main/jniLibs/

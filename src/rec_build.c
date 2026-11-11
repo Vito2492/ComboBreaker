@@ -413,8 +413,40 @@ static bool load_tcc(tcc_api_t *t, char *libdir, size_t n)
     return false;
 }
 
+// Android: TinyCC's code for arm64 has had less use, so its first run is on
+// trial. A trial left behind by a run that ended before
+// rec_build_trial_passed() means the code crashed: the interpreter from then
+// on.
+static char trial[2400];
+
+static bool tcc_trial_start(const char *src)
+{
+#ifdef __ANDROID__
+    char failed[2400];
+    snprintf(failed, sizeof failed, "%s/tcc-failed", src);
+    snprintf(trial, sizeof trial, "%s/tcc-trial", src);
+    if (file_exists(failed)) { *trial = 0; return false; }
+    if (file_exists(trial)) {
+        rename(trial, failed);
+        fprintf(stderr, "rec: TinyCC's code stopped the last run early: using the interpreter\n");
+        *trial = 0;
+        return false;
+    }
+    write_file(trial, "running TinyCC's code for the first time\n");
+#else
+    (void)src;
+#endif
+    return true;
+}
+
+void rec_build_trial_passed(void)
+{
+    if (*trial) { remove(trial); *trial = 0; }
+}
+
 static bool load_with_tcc(const char *src, char *err, size_t errlen)
 {
+    if (!tcc_trial_start(src)) { snprintf(err, errlen, "TinyCC's code failed before"); return false; }
     tcc_api_t t;
     char libdir[2048];
     if (!load_tcc(&t, libdir, sizeof libdir)) { snprintf(err, errlen, "TinyCC (libtcc) not found"); return false; }
