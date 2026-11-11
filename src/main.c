@@ -33,6 +33,9 @@
 #include "rec_build.h"
 #include "game.h"
 #include "training.h"
+#ifdef __ANDROID__
+#include "android.h"
+#endif
 #include "launch.h"
 #include "picker.h"
 
@@ -108,6 +111,19 @@ const char *data_dir(void)
 {
     static char *dir;
     if (dir) return dir;
+#ifdef __ANDROID__
+    // the app's own folder on the phone's storage (Android/data/<app>/files),
+    // which a computer can reach over USB; else its internal one
+    const char *ext = SDL_AndroidGetExternalStoragePath();
+    if (ext) {
+        size_t n = strlen(ext) + 2;
+        dir = malloc(n);
+        snprintf(dir, n, "%s/", ext);
+        return dir;
+    }
+    dir = SDL_GetPrefPath("", PRODUCT);
+    if (dir) return dir;
+#endif
     if (writable_dir(base_dir())) { dir = SDL_strdup(base_dir()); return dir; }
     const char *ai = appimage_dir();
     if (ai) {
@@ -571,6 +587,24 @@ static int option_values(const char *a, const char *next)
 // (headless: the one used last). False: quit.
 static bool choose_game(const char *want, bool headless)
 {
+#ifdef __ANDROID__
+    // on a phone: Killer Instinct only, from files the player picks the
+    // first time (copied into the app's folder)
+    if (!headless) {
+        game_select(&game_ki1);
+        char buf[4096], missing[1024];
+        for (;;) {
+            missing[0] = 0;
+            const char *need[10] = { game.versions[0].rom, game.chd };
+            for (int i = 0; i < 8; i++) need[2 + i] = game.sound_roms[i];
+            for (int i = 0; i < 10; i++)
+                if (!readable(find_data(need[i], buf, sizeof buf)) && !(i == 1 && readable(find_data(game.disk, buf, sizeof buf))))
+                    snprintf(missing + strlen(missing), sizeof missing - strlen(missing), " %s", need[i]);
+            if (!*missing) return true;
+            if (!android_pick_game_files(missing)) return false;
+        }
+    }
+#endif
     char last_path[4200], last[16] = "";
     snprintf(last_path, sizeof last_path, "%slast_game.txt", data_dir());
     FILE *f = fopen(last_path, "r");
@@ -684,7 +718,7 @@ int main(int argc, char **argv)
         }
         if (!choose_game(want, tool)) return 0;
     }
-#ifdef _WIN32
+#if defined _WIN32 || defined __ANDROID__
     {   // a GUI program has no console: keep the log beside the executable
         static char log[4096];
         snprintf(log, sizeof log, "%s%s.log", data_dir(), game.id);

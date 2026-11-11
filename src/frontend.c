@@ -24,6 +24,9 @@
 #include "game.h"
 #include "video.h"
 #include "shaders.h"
+#ifdef __ANDROID__
+#include "touch.h"
+#endif
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <math.h>
@@ -366,6 +369,9 @@ static void read_players(uint32_t held[2])
         held[p] |= pb[p];
     }
     pad_mirror_check(pb);
+#ifdef __ANDROID__
+    if (touch_shown(pads[0] != NULL)) held[0] |= touch_held();
+#endif
     // SOCD cleaning: opposite directions together resolve the way fight sticks do
     for (int p = 0; p < 2 && cfg.socd; p++) {
         const uint32_t lr = 1u << BTN_LEFT | 1u << BTN_RIGHT, ud = 1u << BTN_UP | 1u << BTN_DOWN;
@@ -935,6 +941,10 @@ unsigned frontend_menu_buttons(void)
     if (ks[SDL_SCANCODE_BACKSPACE]) m |= MB_B | MB_SELECT;
     if (ks[SDL_SCANCODE_DELETE]) m |= MB_Y;
     if (ks[SDL_SCANCODE_INSERT]) m |= MB_X;
+#ifdef __ANDROID__
+    if (touch_shown(pads[0] != NULL)) m |= touch_menu_buttons();
+    if (ks[SDL_SCANCODE_AC_BACK]) m |= MB_B;
+#endif
     return m;
 }
 
@@ -1269,6 +1279,18 @@ static bool handle_events(void)
     SDL_Event ev;
     while (SDL_PollEvent(&ev)) {
         pad_prompt_event(&pad_prompt, &ev);
+#ifdef __ANDROID__
+        if (touch_shown(pads[0] != NULL) || cfg.touch_controls != TOUCH_OFF) {
+            int w, h;
+            SDL_GetWindowSizeInPixels(win, &w, &h);
+            if (touch_event(&ev, w, h)) continue;
+        }
+        // the phone's Back: the program's menu, and back out of it
+        if (ev.type == SDL_KEYDOWN && ev.key.keysym.scancode == SDL_SCANCODE_AC_BACK) {
+            if (!ev.key.repeat) { if (menu_open) menu_back(); else if (!home_menu_open()) menu_toggle(); }
+            continue;
+        }
+#endif
         switch (ev.type) {
         case SDL_QUIT: return false;
         case SDL_CONTROLLERDEVICEADDED: pad_added(ev.cdevice.which); break;
@@ -1358,6 +1380,17 @@ static bool handle_events(void)
         }
     }
     check_quit_hold();
+#ifdef __ANDROID__
+    // the on-screen controls: the menu button, and the program's menu
+    bool shown = touch_shown(pads[0] != NULL), tapped = false;
+    video_set_touch(shown);
+    uint32_t pr = touch_pressed(&tapped);
+    if (shown && tapped) menu_toggle();
+    else if (shown && menu_open && pr)
+        menu_nav(pr & 1u << BTN_UP ? -1 : pr & 1u << BTN_DOWN ? 1 : 0,
+                 pr & 1u << BTN_LEFT ? -1 : pr & 1u << BTN_RIGHT ? 1 : 0,
+                 pr & (1u << BTN_LF | 1u << BTN_START), pr & 1u << BTN_LM);
+#endif
     return !quit_requested;
 }
 

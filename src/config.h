@@ -50,6 +50,7 @@ typedef struct {
     bool input_display;
     bool perf_overlay;
     bool training;             // health refill + timer freeze
+    int touch_controls;        // TOUCH_AUTO / ON / OFF (Android)
     bool home_menu;            // console-style menu (Arcade, VS, Practice, Options) on Start
     bool home_random, home_timer;   // its Options: random select, the fight clock
     char home_pad[2][8];       // its Options > CONTROLS: the SNES button of each move, e.g. "LYXRBA"

@@ -17,3 +17,5 @@ const char *video_backend(void);
 bool video_set_shader(const char *path, char *err, size_t errlen);
 bool video_shaders_supported(void);
 void video_close(void);
+// The on-screen touch controls (Android): drawn over each frame while on.
+void video_set_touch(bool shown);

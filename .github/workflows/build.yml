@@ -1,4 +1,4 @@
-# Builds ComboBreaker for Windows, Linux and macOS on every push, and
+# Builds ComboBreaker for Windows, Linux, macOS and Android on every push, and
 # attaches the packages to a release when one is published on GitHub with a
 # tag v*. The packages
 # hold the program, a Zig compiler (to build the game's code on the player's
@@ -123,9 +123,47 @@ jobs:
       - uses: actions/upload-artifact@v4
         with: { name: ComboBreaker-macOS, path: ComboBreaker-macOS.tar.xz }
 
+  android:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.9' }
+      - name: Tools
+        run: sudo apt-get update && sudo apt-get install -y libsdl2-dev python3
+      - name: Desktop program (draws the icon)
+        run: make -j4 ultracombo
+      - name: SDL2 sources
+        run: curl -sSfL https://github.com/libsdl-org/SDL/releases/download/release-$SDL/SDL2-$SDL.tar.gz | tar xz
+      - name: Prepare
+        run: sh tools/android-prepare.sh SDL2-$SDL ./ultracombo
+      - name: Signing key
+        env: { KEY: '${{ secrets.ANDROID_KEYSTORE_B64 }}' }
+        run: |
+          if [ -n "$KEY" ]; then
+            echo "$KEY" | base64 -d > $RUNNER_TEMP/release.keystore
+            echo "ANDROID_KEYSTORE=$RUNNER_TEMP/release.keystore" >> $GITHUB_ENV
+          else
+            echo "no signing key in the secrets: the APK is signed with a throwaway debug key"
+          fi
+      - name: Build
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          ndk=$(sed -n 's/^Pkg.Revision *= *//p' $ANDROID_NDK_HOME/source.properties)
+          cd android
+          gradle --no-daemon assembleRelease -PndkVersion=$ndk -PversionCode=${{ github.run_number }} -PversionName=${GITHUB_REF_NAME#v}
+          cp app/build/outputs/apk/release/app-release.apk ../ComboBreaker-Android.apk
+      - uses: actions/upload-artifact@v4
+        with: { name: ComboBreaker-Android, path: ComboBreaker-Android.apk }
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [windows, linux, macos]
+    needs: [windows, linux, macos, android]
     runs-on: ubuntu-24.04
     permissions: { contents: write }
     steps:
@@ -138,3 +176,4 @@ jobs:
             ComboBreaker-Windows.zip
             ComboBreaker-Linux.tar.xz
             ComboBreaker-macOS.tar.xz
+            ComboBreaker-Android.apk

@@ -7,6 +7,9 @@
 #include "shaders.h"
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef __ANDROID__
+#include "touch.h"
+#endif
 
 static SDL_Window *win;
 static bool use_gl;
@@ -17,6 +20,9 @@ static bool use_gl;
 
 static SDL_Renderer *ren;
 static SDL_Texture *ren_game, *ren_over;
+static bool touch_on;
+
+void video_set_touch(bool shown) { touch_on = shown; }
 
 static bool sdl_init(void)
 {
@@ -41,6 +47,14 @@ static void sdl_present(const uint32_t *game, const uint32_t *overlay, int filte
     SDL_RenderClear(ren);
     SDL_RenderCopy(ren, ren_game, NULL, NULL);
     SDL_RenderCopy(ren, ren_over, NULL, NULL);
+#ifdef __ANDROID__
+    if (touch_on) {
+        int w, h;
+        SDL_RenderSetLogicalSize(ren, 0, 0);
+        SDL_GetRendererOutputSize(ren, &w, &h);
+        touch_draw(ren, w, h);
+    }
+#endif
     SDL_RenderPresent(ren);
 }
 
@@ -288,7 +302,12 @@ SDL_Window *video_open(const char *title, int w, int h)
 {
     win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h,
                            SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI);
-    if (win && !getenv("KI2_NO_GL") && gl_init()) { use_gl = true; return win; }
+#ifdef __ANDROID__
+    bool try_gl = false;                    // phones have OpenGL ES: the SDL renderer draws with it
+#else
+    bool try_gl = !getenv("KI2_NO_GL");
+#endif
+    if (win && try_gl && gl_init()) { use_gl = true; return win; }
     if (ctx) { SDL_GL_DeleteContext(ctx); ctx = NULL; }
     if (!win) win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h, SDL_WINDOW_RESIZABLE);
     if (!win || !sdl_init()) return NULL;

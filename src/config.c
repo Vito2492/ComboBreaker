@@ -26,6 +26,9 @@ static const char *const scale_names[] = { "fit", "integer", "stretch", 0 };
 static const char *const pacing_names[] = { "auto", "audio", "vsync", 0 };
 static const char *const blood_names[] = { "none", "low", "medium", "high", 0 };
 static const char *const blood_colour_names[] = { "red", "white", 0 };
+#ifdef __ANDROID__
+static const char *const touch_names[] = { "auto", "on", "off", 0 };
+#endif
 static const char *const filter_names[] = { "sharp", "smooth", "scanlines", "crt", 0 };
 
 static const char *const button_names[NBUTTONS] = {
@@ -174,6 +177,10 @@ static void build_table(void)
     add("gamepad", "p1_labels", T_ENUM, &cfg.pad_family[0], "auto",
         "button labels: auto, xbox, playstation, switch, positions; bindings stay unchanged", family_names);
     add("gamepad", "p2_labels", T_ENUM, &cfg.pad_family[1], "auto", "player 2 button labels", family_names);
+#ifdef __ANDROID__
+    add("gamepad", "touch_controls", T_ENUM, &cfg.touch_controls, "auto",
+        "on-screen controls: auto (while no pad is connected, or once the screen is touched), on, off", touch_names);
+#endif
     add("gamepad", "deadzone", T_INT, &cfg.pad_deadzone, "16000", "left stick deadzone, 0-32767", 0);
     add("gamepad", "rumble", T_BOOL, &cfg.rumble, "yes", "vibrate when your character is hit", 0);
     add("gamepad", "menu", T_PAD, &cfg.pad_menu, "guide", "hotkeys on the pad (Back+Start also opens the menu)", 0);
