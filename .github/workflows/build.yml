@@ -158,19 +158,23 @@ jobs:
               -o ../android/app/src/main/jniLibs/$abi/libtcc.so -lm -ldl
           done
       - name: Signing key
+        # Only the keystore is secret (ANDROID_KEYSTORE_B64). Its password
+        # is not: it would only guard the file, which is already a secret.
+        # A key that can't be read gives a warning and the throwaway key.
         env: { KEY: '${{ secrets.ANDROID_KEYSTORE_B64 }}' }
         run: |
-          if [ -n "$KEY" ]; then
-            echo "$KEY" | base64 -d > $RUNNER_TEMP/release.keystore
+          pw=7gimyRuWV2blKWinjq535np
+          if [ -n "$KEY" ] && echo "$KEY" | tr -d ' \r\n' | base64 -d > $RUNNER_TEMP/release.keystore &&
+             keytool -list -keystore $RUNNER_TEMP/release.keystore -storepass "$pw" -alias combobreaker >/dev/null; then
             echo "ANDROID_KEYSTORE=$RUNNER_TEMP/release.keystore" >> $GITHUB_ENV
+            echo "ANDROID_KEYSTORE_PASSWORD=$pw" >> $GITHUB_ENV
+            echo "ANDROID_KEY_PASSWORD=$pw" >> $GITHUB_ENV
+            echo "ANDROID_KEY_ALIAS=combobreaker" >> $GITHUB_ENV
+            echo "signing with the project's key"
           else
-            echo "no signing key in the secrets: the APK is signed with a throwaway debug key"
+            echo "::warning::no usable signing key (secret ANDROID_KEYSTORE_B64): the APK is signed with a throwaway debug key"
           fi
       - name: Build
-        env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           ndk=$(sed -n 's/^Pkg.Revision *= *//p' $ANDROID_NDK_HOME/source.properties)
           v=${{ inputs.release_tag || github.ref_name }}
