@@ -1,24 +1,34 @@
 # ComboBreaker
 
 **The arcade Killer Instinct (1994), with the menus and modes of the Super
-Nintendo version, as a native PC program.**
+Nintendo version, as a native program for PC and Android.**
 
-The arcade game has the best graphics and sound, but it has no modes: you
-put in a coin and you fight. The SNES version had the menus: 1 Player Game,
-2 Player Game, Tournament Game, Practice Game and Options. ComboBreaker puts
-those menus on top of the arcade game itself.
+**El Killer Instinct de arcade (1994) con los menús y modos de la versión de
+Super Nintendo, como programa nativo para PC y Android.**
 
-ComboBreaker is built almost entirely on
+[English](#why-i-made-this) · [Español](#en-español) ·
+**Guide: [docs/GUIDE.md](docs/GUIDE.md)** · **Guía: [docs/GUIA.md](docs/GUIA.md)**
+
+## Why I made this
+
+Killer Instinct was my first game, and it's still my favourite. I wanted to
+play it with the arcade's graphics and animations, but with the Super
+Nintendo version's fuller modes, like Practice, Tournament and the rematch in
+2 Player. The arcade has the best picture and sound, but no modes: you put in
+a coin and you fight. ComboBreaker puts the console's menus on top of the
+arcade game itself.
+
+It is an unofficial fan project, not licensed by the game's owners, and it
+stands on other people's work: almost all of it is
 [**UltraCombo**](https://github.com/thefixinhixon/UltraCombo) by
-thefixinhixon, which runs the arcade game's own code natively on a PC
-(translated to C, with the sound board and hard disk emulated) and already
-brings shaders, gamepads, save states, rewind, netplay and more. All of that
-work is UltraCombo's. ComboBreaker adds the home-version menus on top, and
-changes nothing in how the arcade game runs.
+thefixinhixon, which runs the arcade game's own code natively (translated to
+C, with the sound board and hard disk emulated) and already brings shaders,
+gamepads, save states, rewind, netplay and more. All of that is UltraCombo's
+work. On top of it I added, with the help of AI, the console interface and
+the other adaptations, trying to make them feel seamless with the original
+game. Nothing changes in how the arcade game itself runs.
 
-*[En español, más abajo](#en-español).*
-
-**New here? Read the [guide](docs/GUIDE.md)** · **¿Primera vez? Leé la [guía](docs/GUIA.md)**: installing, where the game files go, controls, modes and codes.
+I hope you like it.
 
 ## What ComboBreaker adds
 
@@ -170,40 +180,142 @@ affiliated with them. The game, its code and its data belong to their owners.
 
 ## En español
 
-**El Killer Instinct de arcade (1994), con los menús y modos de la versión de
-Super Nintendo, como programa nativo para PC.**
+### Por qué lo hice
 
-El arcade tiene los mejores gráficos y sonido, pero no tiene modos: ponés una
-ficha y peleás. La versión de SNES tenía los menús: 1 Player Game, 2 Player
-Game, Tournament Game, Practice Game y Options. ComboBreaker pone esos menús
-encima del propio juego de arcade.
+Killer Instinct fue mi primer juego y sigue siendo mi favorito. Quería
+jugarlo con los gráficos y las animaciones del arcade, pero con los modos más
+completos de la versión de Super Nintendo, como la práctica, el torneo y la
+revancha en 2 jugadores. El arcade tiene la mejor imagen y el mejor sonido,
+pero no tiene modos: pones una ficha y peleas. ComboBreaker pone los menús de
+la consola encima del propio juego de arcade.
 
-ComboBreaker está construido casi por completo sobre
+Es un proyecto de fans no oficial, sin licencia de los dueños del juego, y se
+construye sobre el trabajo de otros: casi todo es
 [**UltraCombo**](https://github.com/thefixinhixon/UltraCombo), de
-thefixinhixon, que corre el código original del arcade de forma nativa en la
-PC y ya trae filtros, mandos, guardado de partida, rebobinado y juego en red.
-Todo ese trabajo es de UltraCombo. ComboBreaker agrega los menús de la
-versión de consola y no cambia nada de cómo corre el juego.
+thefixinhixon, que corre el código original del arcade de forma nativa
+(traducido a C, con la placa de sonido y el disco emulados) y ya trae
+filtros de imagen, mandos, guardado de partida, rebobinado, juego en red y
+más. Todo eso es trabajo de UltraCombo. Encima agregué, con ayuda de
+inteligencia artificial, la interfaz de la consola y las demás adaptaciones,
+buscando que se sientan parte del juego original. El juego de arcade en sí
+corre exactamente igual.
 
-**Qué agrega:** el menú del SNES al apretar Start en la pantalla de título;
-2 jugadores con revancha; torneo de hasta 8 jugadores; práctica sin barras de
-vida; Options con estrellas de dificultad y tabla de controles; pausa en
-cualquier momento; los códigos del SNES (escenario, velocidad, personaje al
-azar); la música de cada escenario.
+Espero que les guste.
 
-**Requisitos:** Windows 10/11 de 64 bits, Linux, Mac con procesador Apple o Android 7 (64 bits), casi cualquier PC de los
-últimos diez años, 1 GB de RAM libre, una placa de video con OpenGL 2.1 y unos
-400 MB de disco. La primera vez el programa tarda un minuto en prepararse.
+### Qué agrega ComboBreaker
 
-**Guía completa paso a paso:** [docs/GUIA.md](docs/GUIA.md).
+En la demo del arcade, presiona Start para ir a la pantalla de título del
+arcade, y Start otra vez para abrir el menú de la Super Nintendo:
 
-**Qué necesitás:** tus propios archivos del juego, obtenidos legalmente: el
-set `kinst` de MAME, versión L1.5D. Son 10 archivos: `ki-l15d.u98` (ROM de
-arranque), las 8 ROMs de sonido `u10-l1` … `u13-l1` y `u33-l1` … `u36-l1`, y
-el disco `kinst.chd`. La tabla de arriba tiene sus tamaños y checksums para
-comprobar que sean los correctos. No se incluye ningún archivo del juego.
-Ponelos en la carpeta `run`, al lado de `ComboBreaker.exe`, y abrí el
-programa.
+- **1 Player Game:** el arcade de siempre.
+- **2 Player Game:** los dos jugadores van directo a elegir personaje; al
+  terminar cada pelea vuelven los dos a elegir, en vez de quedarse el ganador
+  como en el arcade.
+- **Tournament Game:** hasta 8 jugadores con nombre de tres letras y récord de
+  victorias y derrotas, con la pantalla NEXT FIGHT de la Super Nintendo sobre
+  la selección de personajes del arcade. El ganador se queda y el que pierde
+  va al final de la fila. La pantalla de victoria (Supreme, Awesome, Perfect)
+  se ve completa; el continue y los récords del arcade no aparecen.
+- **Practice Game:** el jugador 1 elige los dos personajes; el rival se queda
+  quieto y nadie pierde vida. Sin barras de vida ni reloj, como en la Super
+  Nintendo.
+- **Options:** dificultad (cinco estrellas), personaje al azar, reloj, sangre,
+  finishing moves y la tabla de controles de la Super Nintendo para cambiar
+  los botones de cada jugador.
+
+Además:
+
+- **Pausa en cualquier momento** con Start en estos modos (Continue / Main
+  Menu).
+- **Los códigos de la Super Nintendo:** elegir escenario (mantén una dirección
+  y elige tu personaje con un botón), velocidad en la pantalla VS (lenta,
+  rápida, más rápida, la más rápida; la música no cambia de tono) y personaje
+  al azar (Arriba + Start).
+- **La música propia de cada escenario** en las peleas de dos jugadores.
+- Si dejas el menú quieto, corre la demo del arcade (fichas de los
+  personajes, récords) y Start vuelve al menú.
+
+En el menú se navega con los botones del mando por su posición, como en un
+mando de Nintendo: A (derecha) elige, B (abajo) vuelve, Start también elige.
+En el teclado: Enter y Retroceso. La distribución del mando es la de la Super
+Nintendo: L Y X son puño débil, medio y fuerte; R B A, patada débil, media y
+fuerte. Con `home_menu = no` en `ki1.ini` se juega el arcade puro.
+
+### Lo que necesitas: los archivos del juego
+
+**No se incluye ningún archivo del juego, y nunca se va a incluir.** Necesitas
+tu propia copia, obtenida legalmente, de los archivos del arcade: el set
+`kinst` de MAME, versión L1.5D. Son 10 archivos, con estos nombres exactos
+(los tamaños y checksums están en la tabla en inglés, más arriba):
+
+| Archivo | Qué es |
+|---|---|
+| `ki-l15d.u98` | ROM de arranque, versión L1.5D |
+| `u10-l1`, `u11-l1`, `u12-l1`, `u13-l1` | ROMs de sonido |
+| `u33-l1`, `u34-l1`, `u35-l1`, `u36-l1` | ROMs de sonido |
+| `kinst.chd` | el disco duro de la máquina (CHD de MAME, unos 95 MB) |
+
+Van en la carpeta `run`, al lado del programa. También puedes abrir
+directamente un `kinst.zip` de MAME. Al arrancar, el programa compara tus
+archivos con los volcados conocidos y te dice si alguno no coincide.
+
+### Requisitos
+
+El código del juego corre de forma nativa, así que alcanza casi cualquier PC
+de los últimos diez años: Windows 10 u 11 de 64 bits, o Linux x86-64; un
+procesador de 64 bits con dos núcleos; 1 GB de memoria libre; una tarjeta de
+video con OpenGL 2.1; unos 300 MB de disco más los 100 MB de los archivos del
+juego; teclado o uno o dos mandos (Xbox, PlayStation, Switch y la mayoría de
+los demás). La primera vez, el programa prepara el código del juego para tu
+computadora: tarda alrededor de un minuto, una sola vez.
+
+| Sistema | Paquete | Estado |
+|---|---|---|
+| Windows 10/11 (64 bits) | `ComboBreaker-Windows.zip` | probado |
+| Linux x86-64 (también Steam Deck) | `ComboBreaker-Linux.tar.xz` | **compilado, todavía sin probar en una máquina real** |
+| macOS con procesador Apple (M1 o posterior) | `ComboBreaker-macOS.tar.xz` | **compilado, todavía sin probar en una Mac** |
+| Android 7 o posterior (64 bits) | `ComboBreaker-Android.apk` | probado en un teléfono |
+
+No hay versión para iOS.
+
+### Cómo empezar
+
+1. Descarga el paquete de tu sistema desde la
+   [página de Releases](https://github.com/Vito2492/ComboBreaker/releases) y
+   descomprímelo donde quieras.
+2. Pon tus 10 archivos del juego en la carpeta `run` que viene dentro.
+3. Abre `ComboBreaker.exe` (Windows) o `combobreaker` (Linux, macOS). La
+   primera vez prepara el juego, alrededor de un minuto.
+
+Si falta un archivo, el programa te dice cuál, te muestra qué va dónde y te
+ofrece abrir la carpeta `run`. En Android, la app te pide la carpeta del
+teléfono donde tienes los archivos y los copia. La
+[guía](docs/GUIA.md) explica todo paso a paso, con los controles y los
+códigos.
+
+F1 abre el menú propio de UltraCombo: gráficos, pantalla completa y
+resolución, filtros, controles, volumen, guardado de partida y juego en red
+(ver el [manual de UltraCombo](docs/UltraCombo-manual.md), en inglés).
+
+### Compilar
+
+Igual que UltraCombo: `make` para Linux (necesita gcc, SDL2 y python3) y
+`make windows` para compilar la versión de Windows con MinGW. El código del
+menú está en `src/home.c`; las direcciones de memoria del juego que usa
+están en `src/game_ki1.c`, con cómo se encontró cada una.
+
+### Créditos y licencias
+
+- [UltraCombo](https://github.com/thefixinhixon/UltraCombo), de
+  thefixinhixon, licencia MIT (`LICENSE`): el programa sobre el que se
+  construye este.
+- Lo que agrega ComboBreaker usa la misma licencia MIT.
+- Las letras del menú son de
+  [Press Start 2P](https://fonts.google.com/specimen/Press+Start+2P), de
+  CodeMan38, SIL Open Font Licence.
+- La app de Android incluye [TinyCC](https://github.com/TinyCC/tinycc) (LGPL)
+  y SDL2 (zlib).
 
 Killer Instinct es una marca registrada de sus dueños. Este es un proyecto de
-fans, sin relación con ellos.
+fans, sin relación con ellos. El juego, su código y sus datos pertenecen a
+sus dueños.

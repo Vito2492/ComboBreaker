@@ -6,12 +6,12 @@ los archivos del juego y cómo se juega.
 
 *[English version](GUIDE.md).*
 
-## 1. Lo que necesitás
+## 1. Lo que necesitas
 
 - Una PC con Windows 10 u 11 (64 bits), Linux o una Mac con procesador Apple
   (M1 o posterior). Casi cualquier PC de los últimos diez años alcanza.
 - **Tus propios archivos del juego.** ComboBreaker no trae ninguno, y nunca
-  los va a traer: son del juego original y tienen dueño. Necesitás el set
+  los va a traer: son del juego original y tienen dueño. Necesitas el set
   `kinst` de MAME, versión **L1.5D**, obtenido de forma legal. Son 10
   archivos:
 
@@ -20,29 +20,29 @@ los archivos del juego y cómo se juega.
 | `ki-l15d.u98` | ROM de arranque, versión L1.5D |
 | `u10-l1`, `u11-l1`, `u12-l1`, `u13-l1` | ROMs de sonido |
 | `u33-l1`, `u34-l1`, `u35-l1`, `u36-l1` | ROMs de sonido |
-| `kinst.chd` | el disco rígido de la máquina (unos 95 MB) |
+| `kinst.chd` | el disco duro de la máquina (unos 95 MB) |
 
 Los tamaños y checksums exactos están en el [README](../README.md#what-you-need-the-game-files).
-Si tenés el set como un `kinst.zip` de MAME (con la carpeta `kinst` y el
-`kinst.chd` adentro al lado), también sirve: ver el paso 3.
+Si tienes el set como un `kinst.zip` de MAME (con la carpeta `kinst` y el
+`kinst.chd` al lado), también sirve: ver el paso 3.
 
 ## 2. Descargar
 
-1. Entrá a la página de
-   [Releases](https://github.com/Vito2492/ComboBreaker/releases) y bajá el
+1. Entra a la página de
+   [Releases](https://github.com/Vito2492/ComboBreaker/releases) y descarga el
    paquete de tu sistema:
    - Windows: `ComboBreaker-Windows.zip`
    - Linux (también Steam Deck): `ComboBreaker-Linux.tar.xz` (todavía **no
-     probado** en una máquina real: si lo probás, contanos cómo te fue)
+     probado** en una máquina real: si lo pruebas, cuéntanos cómo te fue)
    - Mac: `ComboBreaker-macOS.tar.xz` (todavía **no probado** en una Mac:
-     si lo probás, contanos cómo te fue)
+     si lo pruebas, cuéntanos cómo te fue)
    - Android: ver la sección 7.
-2. Descomprimilo donde quieras, por ejemplo en `Documentos\ComboBreaker`.
+2. Descomprímelo donde quieras, por ejemplo en `Documentos\ComboBreaker`.
    No hace falta instalar nada.
 
 ## 3. Poner los archivos del juego
 
-Adentro de la carpeta de ComboBreaker hay una carpeta `run`. Copiá ahí los
+Dentro de la carpeta de ComboBreaker hay una carpeta `run`. Copia ahí los
 10 archivos, con esos nombres exactos:
 
 ```
@@ -59,18 +59,18 @@ Si te falta alguno, el programa te dice cuál, te muestra esta lista y tiene
 un botón para abrir la carpeta `run`. Si alguno está mal (otra versión, un
 archivo dañado), también te lo dice.
 
-Con un `kinst.zip` de MAME: arrastralo sobre `ComboBreaker.exe`, o abrilo
+Con un `kinst.zip` de MAME: arrástralo sobre `ComboBreaker.exe`, o ábrelo
 desde la línea de comandos: `ComboBreaker.exe ruta\a\kinst.zip`.
 
 ## 4. Primer arranque
 
 - **Windows:** doble clic en `ComboBreaker.exe`. Como el programa no está
-  firmado, Windows puede mostrar "Windows protegió su PC": tocá *Más
+  firmado, Windows puede mostrar "Windows protegió su PC": haz clic en *Más
   información* y después *Ejecutar de todas formas*.
-- **Linux:** ejecutá `./combobreaker` desde la carpeta.
+- **Linux:** ejecuta `./combobreaker` desde la carpeta.
 - **Mac:** la primera vez, clic derecho sobre `combobreaker` → *Abrir*. Si
   dice que está dañado o que no se puede verificar, en la Terminal, dentro de
-  la carpeta: `xattr -dr com.apple.quarantine .` y probá de nuevo.
+  la carpeta: `xattr -dr com.apple.quarantine .` y prueba de nuevo.
 
 **La primera vez tarda alrededor de un minuto** antes de mostrar el juego: el
 programa prepara el código del juego para tu computadora. Lo hace una sola
@@ -79,7 +79,7 @@ vez y lo guarda en la carpeta `cache`.
 ## 5. Cómo se juega
 
 El juego arranca con la introducción y la demo del arcade, como la máquina.
-Apretá **Start** para ir a la pantalla de título y **Start** otra vez para
+Presiona **Start** para ir a la pantalla de título y **Start** otra vez para
 abrir el menú de la Super Nintendo.
 
 ### Controles
@@ -120,12 +120,12 @@ Enter elige y Retroceso vuelve.
 ### Pausa
 
 En cualquier momento de una pelea de estos modos, **Start** pausa. Desde la
-pausa podés seguir o volver al menú principal.
+pausa puedes seguir o volver al menú principal.
 
 ### Los códigos de la Super Nintendo
 
-- **Elegir escenario:** en la pantalla de personajes, mantené una dirección
-  y elegí tu personaje con un botón. Elige el primer jugador que confirma.
+- **Elegir escenario:** en la pantalla de personajes, mantén una dirección
+  y elige tu personaje con un botón. Elige el primer jugador que confirma.
 
 | | Abajo + | Arriba + |
 |---|---|---|
@@ -155,7 +155,7 @@ volumen, guardar y cargar partida, rebobinar y juego en red. Todo eso viene
 de UltraCombo y está explicado en el
 [manual de UltraCombo](UltraCombo-manual.md).
 
-Si preferís el arcade puro, sin los menús de la consola, poné
+Si prefieres el arcade puro, sin los menús de la consola, pon
 `home_menu = no` en `ki1.ini`.
 
 ## 6. Problemas comunes
@@ -163,29 +163,29 @@ Si preferís el arcade puro, sin los menús de la consola, poné
 - **Un solo joystick mueve a los dos jugadores.** Algunos mandos (por ejemplo
   ciertos 8BitDo) aparecen dos veces en la PC. ComboBreaker lo detecta a los
   pocos segundos de jugar y descarta el duplicado, con un aviso en pantalla.
-- **"Falta un archivo" o "no coincide".** Revisá que los nombres sean
+- **"Falta un archivo" o "no coincide".** Revisa que los nombres sean
   exactos (sin `.bin` ni `.zip` agregados) y que sea la versión L1.5D.
 - **Tarda mucho la primera vez.** Es normal: prepara el juego una vez. Si
-  borrás la carpeta `cache`, lo vuelve a hacer.
-- **Quiero volver a la configuración original.** Cerrá el programa y borrá
+  borras la carpeta `cache`, lo vuelve a hacer.
+- **Quiero volver a la configuración original.** Cierra el programa y borra
   `ki1.ini`; se crea de nuevo al abrirlo.
-- **Algo falló.** En la carpeta del programa está `ki1.log`. Si abrís un
+- **Algo falló.** En la carpeta del programa está `ki1.log`. Si abres un
   reporte en [GitHub](https://github.com/Vito2492/ComboBreaker/issues),
-  adjuntalo.
+  adjúntalo.
 
 ## 7. Android
 
-Probado en un teléfono. Si en el tuyo algo no anda, contalo en
+Probado en un teléfono. Si en el tuyo algo no funciona, cuéntalo en
 [GitHub](https://github.com/Vito2492/ComboBreaker/issues).
 
-1. Bajá `ComboBreaker-Android.apk` desde
+1. Descarga `ComboBreaker-Android.apk` desde
    [Releases](https://github.com/Vito2492/ComboBreaker/releases) en el teléfono
-   y abrilo. Android te va a pedir permiso para instalar apps de esa fuente
-   (el navegador o el administrador de archivos): aceptalo.
-2. Copiá tus 10 archivos del juego (o tu `kinst.zip` de MAME) a una carpeta
+   y ábrelo. Android te va a pedir permiso para instalar apps de esa fuente
+   (el navegador o el administrador de archivos): acéptalo.
+2. Copia tus 10 archivos del juego (o tu `kinst.zip` de MAME) a una carpeta
    del teléfono, por ejemplo `Descargas/kinst`.
-3. Abrí ComboBreaker. La primera vez te pide la carpeta: tocá *Choose
-   folder*, elegí esa carpeta y tocá *Usar esta carpeta*. La app copia los
+3. Abre ComboBreaker. La primera vez te pide la carpeta: toca *Choose
+   folder*, elige esa carpeta y toca *Usar esta carpeta*. La app copia los
    archivos a su carpeta (`Android/data/io.github.vito2492.combobreaker/files/run`)
    y ya no los vuelve a pedir.
 4. La primera partida tarda un poco más mientras prepara el juego para el

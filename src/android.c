@@ -57,7 +57,7 @@ bool android_pick_game_files(const char *missing)
              "None come with the app.\n\n"
              "Choose the folder on your phone that holds them (a MAME %s.zip there works too). "
              "They are copied into the app once.\n\n"
-             "Elegí la carpeta del teléfono con tus archivos del juego (o tu %s.zip).\n\n"
+             "Elige la carpeta del teléfono con tus archivos del juego (o tu %s.zip).\n\n"
              "Still needed / Faltan:%s",
              game.product, game.set, game.set, game.set, missing);
     if (ask_game_files(msg) < 0) return false;
