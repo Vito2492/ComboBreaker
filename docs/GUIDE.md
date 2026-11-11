@@ -30,9 +30,11 @@ too: see step 3.
 1. Go to the [Releases](https://github.com/Vito2492/ComboBreaker/releases)
    page and download your system's package:
    - Windows: `ComboBreaker-Windows.zip`
-   - Linux: `ComboBreaker-Linux.tar.xz`
+   - Linux (Steam Deck too): `ComboBreaker-Linux.tar.xz` (**not tested** on
+     a real machine yet: reports welcome)
    - Mac: `ComboBreaker-macOS.tar.xz` (**not tested** on a Mac yet: reports
      welcome)
+   - Android: see section 7.
 2. Unpack it anywhere. Nothing to install.
 
 ## 3. Add the game files
@@ -164,8 +166,8 @@ in `ki1.ini`.
 
 ## 7. Android
 
-**New, still being tested:** it may have problems on some phones. Please
-report them on GitHub.
+Tested on a phone. If something doesn't work on yours, please report it on
+[GitHub](https://github.com/Vito2492/ComboBreaker/issues).
 
 1. Download `ComboBreaker-Android.apk` from
    [Releases](https://github.com/Vito2492/ComboBreaker/releases) on the phone

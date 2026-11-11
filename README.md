@@ -116,9 +116,9 @@ which takes about a minute, once.
 | Platform | Package | State |
 |---|---|---|
 | Windows 10/11 (64-bit) | `ComboBreaker-Windows.zip` | tested |
-| Linux x86-64 | `ComboBreaker-Linux.tar.xz` | built and tested in the cloud |
+| Linux x86-64 (Steam Deck too) | `ComboBreaker-Linux.tar.xz` | **built, not tested on a real machine yet**: reports welcome |
 | macOS on Apple silicon (M1 and later) | `ComboBreaker-macOS.tar.xz` | **built, not tested on a Mac yet**: reports welcome |
-| Android 7 or later (64-bit) | `ComboBreaker-Android.apk` | **new, being tested**: see the [guide](docs/GUIDE.md#7-android) |
+| Android 7 or later (64-bit) | `ComboBreaker-Android.apk` | tested on a phone: see the [guide](docs/GUIDE.md#7-android) |
 
 On macOS the program is not signed: the first time, right-click it and choose
 Open. If it does not start, `brew install sdl2` and try again. On Android the app asks for the folder holding your game files the first time and copies them in; on-screen controls show when no pad is connected. There is no iOS version.

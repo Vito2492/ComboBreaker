@@ -32,9 +32,11 @@ Si tenés el set como un `kinst.zip` de MAME (con la carpeta `kinst` y el
    [Releases](https://github.com/Vito2492/ComboBreaker/releases) y bajá el
    paquete de tu sistema:
    - Windows: `ComboBreaker-Windows.zip`
-   - Linux: `ComboBreaker-Linux.tar.xz`
+   - Linux (también Steam Deck): `ComboBreaker-Linux.tar.xz` (todavía **no
+     probado** en una máquina real: si lo probás, contanos cómo te fue)
    - Mac: `ComboBreaker-macOS.tar.xz` (todavía **no probado** en una Mac:
      si lo probás, contanos cómo te fue)
+   - Android: ver la sección 7.
 2. Descomprimilo donde quieras, por ejemplo en `Documentos\ComboBreaker`.
    No hace falta instalar nada.
 
@@ -173,8 +175,8 @@ Si preferís el arcade puro, sin los menús de la consola, poné
 
 ## 7. Android
 
-**Versión nueva, todavía en prueba:** puede tener problemas en algunos
-teléfonos. Si te pasa algo, contalo en GitHub.
+Probado en un teléfono. Si en el tuyo algo no anda, contalo en
+[GitHub](https://github.com/Vito2492/ComboBreaker/issues).
 
 1. Bajá `ComboBreaker-Android.apk` desde
    [Releases](https://github.com/Vito2492/ComboBreaker/releases) en el teléfono
