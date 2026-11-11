@@ -153,3 +153,88 @@ int net_recv(net_addr_t *from, void *buf, int max)
     from->port = ntohs(a.sin_port);
     return n;
 }
+
+/* ---------------------------------------------------------------- */
+/* This socket as seen from the internet (STUN) and from the LAN       */
+/* ---------------------------------------------------------------- */
+
+// A STUN binding request (RFC 5389) to a public server, from the socket
+// the session will use, answers with the address and port the router gave
+// it outside. Google's and Cloudflare's servers are free for this.
+bool net_stun(net_addr_t *pub)
+{
+    static const struct { const char *host; int port; } servers[] = {
+        { "stun.l.google.com", 19302 }, { "stun1.l.google.com", 19302 },
+        { "stun.cloudflare.com", 3478 }, { "stun2.l.google.com", 19302 },
+    };
+    if (sock == BAD_SOCK) return false;
+    if (getenv("KI2_STUN_FAKE")) {          // testing without internet: this machine's loopback
+        net_addr_t l;
+        if (!net_local(&l)) return false;
+        *pub = l;
+        pub->ip[0] = 127; pub->ip[1] = 0; pub->ip[2] = 0; pub->ip[3] = 1;
+        return true;
+    }
+    uint8_t req[20] = { 0x00, 0x01, 0x00, 0x00, 0x21, 0x12, 0xa4, 0x42 };
+    for (int i = 8; i < 20; i++) req[i] = (uint8_t)(rand() ^ ((int)net_now_ms() * 31 + i));
+    for (int attempt = 0; attempt < 3; attempt++) {
+        for (size_t k = 0; k < sizeof servers / sizeof servers[0]; k++) {
+            net_addr_t to;
+            if (net_resolve(servers[k].host, servers[k].port, &to)) raw_send(&to, req, sizeof req);
+        }
+        double until = net_now_ms() + 700;
+        while (net_now_ms() < until) {
+            uint8_t b[600];
+            net_addr_t from;
+            int n = net_recv(&from, b, sizeof b);
+            if (n < 0) { SDL_Delay(10); continue; }
+            if (n < 20 || b[0] != 0x01 || b[1] != 0x01 || memcmp(b + 4, req + 4, 16)) continue;
+            int len = b[2] << 8 | b[3];
+            for (int at = 20; at + 4 <= 20 + len && at + 4 <= n;) {
+                int type = b[at] << 8 | b[at + 1], al = b[at + 2] << 8 | b[at + 3];
+                const uint8_t *v = b + at + 4;
+                if (at + 4 + al > n) break;
+                if ((type == 0x0020 || type == 0x0001) && al >= 8 && v[1] == 0x01) {    // IPv4
+                    bool x = type == 0x0020;
+                    pub->port = (uint16_t)((v[2] << 8 | v[3]) ^ (x ? 0x2112 : 0));
+                    for (int i = 0; i < 4; i++) pub->ip[i] = (uint8_t)(v[4 + i] ^ (x ? req[4 + i] : 0));
+                    return true;
+                }
+                at += 4 + ((al + 3) & ~3);
+            }
+        }
+    }
+    return false;
+}
+
+// This socket on the local network: the address the way out goes through
+// (no packet is sent for it) and the socket's own port.
+bool net_local(net_addr_t *out)
+{
+    if (sock == BAD_SOCK) return false;
+    struct sockaddr_in a;
+    socklen_t al = sizeof a;
+    if (getsockname(sock, (struct sockaddr *)&a, &al) != 0) return false;
+    out->port = ntohs(a.sin_port);
+    sock_t t = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (t == BAD_SOCK) return false;
+    struct sockaddr_in d = { 0 };
+    d.sin_family = AF_INET;
+    d.sin_port = htons(53);
+    d.sin_addr.s_addr = htonl(0x08080808);
+    bool ok = connect(t, (struct sockaddr *)&d, sizeof d) == 0;
+    struct sockaddr_in l;
+    socklen_t ll = sizeof l;
+    ok = ok && getsockname(t, (struct sockaddr *)&l, &ll) == 0;
+    close_sock(t);
+    if (ok) memcpy(out->ip, &l.sin_addr, 4);
+    return ok;
+}
+
+// Keeps the router's mapping of this socket open while nothing else is sent.
+void net_keepalive(void)
+{
+    static const uint8_t req[20] = { 0x00, 0x01, 0x00, 0x00, 0x21, 0x12, 0xa4, 0x42, 'C', 'B', 'k', 'e', 'e', 'p' };
+    net_addr_t to;
+    if (net_resolve("stun.l.google.com", 19302, &to)) raw_send(&to, req, sizeof req);
+}

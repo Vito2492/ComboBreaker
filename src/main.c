@@ -417,6 +417,29 @@ static int headless_netplay(int end, const char *host_port, const char *join, in
     netplay_set_callbacks(machine_run_inputs, machine_netplay_reset);
     net_simulate(lat, jit, loss);
     bool ok;
+#ifndef _WIN32
+    if (host_port && !strncmp(host_port, "code:", 5)) {
+        // testing connection codes: --net-host code:DIR writes this side's
+        // code there and connects with the other one's once it appears
+        const char *dir = host_port + 5, *mine = netplay_code_prepare(0);
+        if (!mine) { fprintf(stderr, "%s\n", netplay_take_error()); return 1; }
+        char path[1024], other[64] = "";
+        snprintf(path, sizeof path, "%s/%s.code", dir, mine);
+        FILE *f = fopen(path, "w"); if (f) { fputs(mine, f); fclose(f); }
+        for (int t = 0; t < 600 && !*other; t++) {
+            SDL_Delay(100);
+            netplay_update(0);
+            char cmd[1200];
+            snprintf(cmd, sizeof cmd, "ls %s | grep -v '^%s.code$' | head -1", dir, mine);
+            FILE *ls = popen(cmd, "r");
+            if (ls) { if (fgets(other, sizeof other, ls)) other[strcspn(other, ".\n")] = 0; pclose(ls); }
+        }
+        fprintf(stderr, "netplay: my code %s, theirs %s\n", mine, other);
+        ok = netplay_code_connect(other, delay);
+        if (ok) host_port = netplay_local_player() == 0 ? "" : NULL;
+        if (!host_port) join = "code";
+    } else
+#endif
     if (host_port) ok = netplay_host(atoi(host_port), delay);
     else {
         char h[256]; int port = NP_DEFAULT_PORT;

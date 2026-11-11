@@ -12,18 +12,19 @@
 #include "mem.h"
 #include "net.h"
 #include "state.h"
+#include <SDL2/SDL.h>
 #include <stdio.h>
 #include <string.h>
 
 #define MAGIC 0x4e32494bu        // "KI2N"
-#define VERSION 1
+#define VERSION 2                // 2: the console's 2 Player game online (ComboBreaker)
 #define RING 256
 #define MAX_PREDICT 8            // never run further ahead of the opponent than this
 #define TIMEOUT_MS 3000
 #define HASH_EVERY 60
 
-enum { P_HELLO = 1, P_WELCOME, P_DISK, P_DISKACK, P_START, P_INPUT, P_QUIT };
-enum { NP_OFF, NP_HOSTING, NP_JOINING, NP_SEND_DISK, NP_RECV_DISK, NP_STARTING, NP_RUNNING };
+enum { P_HELLO = 1, P_WELCOME, P_DISK, P_DISKACK, P_START, P_INPUT, P_QUIT, P_PUNCH };
+enum { NP_OFF, NP_CODE, NP_HOSTING, NP_JOINING, NP_SEND_DISK, NP_RECV_DISK, NP_STARTING, NP_RUNNING };
 
 static int state = NP_OFF;
 static bool host;
@@ -69,6 +70,13 @@ static uint32_t disk_have;           // guest: bitmask of 1 KB chunks received
 
 static uint32_t end_frame = ~0u;
 
+// connecting by codes (see netplay_code_prepare)
+static net_addr_t cand[2];           // the other side: outside, then on the LAN
+static int ncand;
+static bool code_session;            // connecting by code: punch, and time out
+static double code_since, keepalive_at;
+static char my_code[24];
+
 void netplay_set_callbacks(np_run_fn run, np_reset_fn reset) { run_frame_cb = run; reset_cb = reset; }
 void netplay_set_end(uint32_t f) { end_frame = f; }
 bool netplay_active(void) { return state != NP_OFF; }
@@ -96,7 +104,7 @@ static void fail_reason(const char *msg, int reason)
 {
     snprintf(error, sizeof error, "Netplay: %s", msg);
     fprintf(stderr, "netplay: %s\n", msg);
-    if (state != NP_HOSTING) send_quit(reason);
+    if (state != NP_HOSTING && state != NP_CODE) send_quit(reason);
     state = NP_OFF;
     net_close();
     status[0] = 0;
@@ -108,7 +116,7 @@ static void fail(const char *msg) { fail_reason(msg, 0); }
 void netplay_stop(void)
 {
     if (state == NP_OFF) return;
-    if (state != NP_HOSTING) send_quit(0);
+    if (state != NP_HOSTING && state != NP_CODE) send_quit(0);
     state = NP_OFF;
     restore_own_disk();
     net_close();
@@ -152,6 +160,7 @@ bool netplay_host(int port, int input_delay)
     if (!open_socket(port)) return false;
     host = true;
     delay = input_delay;
+    code_session = false;
     state = NP_HOSTING;
     snprintf(status, sizeof status, "Waiting for a player on port %d", port);
     error[0] = 0;
@@ -165,11 +174,120 @@ bool netplay_join(const char *hostname, int port, int input_delay)
     if (!open_socket(0)) return false;
     host = false;
     delay = input_delay;
+    code_session = false;
+    ncand = 0;
     state = NP_JOINING;
     snprintf(status, sizeof status, "Connecting to %s", net_addr_str(&peer));
     error[0] = 0;
     last_heard = net_now_ms();
     disk_have = 0;
+    return true;
+}
+
+/* ---------------------------------------------------------------- */
+/* Connection codes: no router or VPN set-up                          */
+/* ---------------------------------------------------------------- */
+
+// Each player's code holds their socket's address outside (from STUN) and
+// the end of their address on the local network. With both codes, both
+// sides send to each other at once: each router then takes the other's
+// packets as answers to its own (UDP hole punching). The side with the
+// smaller code hosts. Routers that give every destination a different
+// port (some mobile networks) can't be reached this way.
+
+static const char b32[] = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";   // Crockford's: no I L O U
+
+static void encode(const uint8_t d[9], char *out)
+{
+    int o = 0, bits = 0;
+    uint32_t acc = 0;
+    for (int i = 0; i < 9; i++) {
+        acc = acc << 8 | d[i];
+        bits += 8;
+        while (bits >= 5) { out[o++] = b32[acc >> (bits - 5) & 31]; bits -= 5; if (o == 5 || o == 11) out[o++] = '-'; }
+    }
+    if (bits) out[o++] = b32[acc << (5 - bits) & 31];
+    out[o] = 0;
+}
+
+static bool decode(const char *in, uint8_t d[9])
+{
+    int bits = 0, n = 0;
+    uint32_t acc = 0;
+    for (const char *c = in; *c; c++) {
+        int ch = SDL_toupper((unsigned char)*c), v = -1;
+        if (ch == '-' || ch == ' ') continue;
+        if (ch == 'O') ch = '0';
+        if (ch == 'I' || ch == 'L') ch = '1';
+        const char *f = strchr(b32, ch);
+        if (!f || !ch) return false;
+        v = (int)(f - b32);
+        acc = acc << 5 | (uint32_t)v;
+        bits += 5;
+        if (bits >= 8) { if (n < 9) d[n] = (uint8_t)(acc >> (bits - 8)); n++; bits -= 8; }
+    }
+    if (n != 9) return false;
+    uint8_t sum = 0x5a;
+    for (int i = 0; i < 8; i++) sum = (uint8_t)(sum * 31 + d[i]);
+    return sum == d[8];
+}
+
+const char *netplay_code_prepare(int port)
+{
+    netplay_stop();
+    if (!net_open(port) && !open_socket(0)) return NULL;
+    net_addr_t pub, lan;
+    if (!net_stun(&pub)) {
+        snprintf(error, sizeof error, "Netplay: no answer from the internet (STUN) - check the connection");
+        net_close();
+        return NULL;
+    }
+    if (!net_local(&lan)) memset(&lan, 0, sizeof lan);
+    uint8_t d[9];
+    memcpy(d, pub.ip, 4);
+    d[4] = (uint8_t)(pub.port >> 8); d[5] = (uint8_t)pub.port;
+    d[6] = lan.ip[2]; d[7] = lan.ip[3];
+    uint8_t sum = 0x5a;
+    for (int i = 0; i < 8; i++) sum = (uint8_t)(sum * 31 + d[i]);
+    d[8] = sum;
+    encode(d, my_code);
+    fprintf(stderr, "netplay: code %s (outside %s, LAN port %u)\n", my_code, net_addr_str(&pub), lan.port);
+    state = NP_CODE;
+    keepalive_at = net_now_ms() + 15000;
+    snprintf(status, sizeof status, "Your code: %s", my_code);
+    error[0] = 0;
+    return my_code;
+}
+
+bool netplay_code_connect(const char *theirs, int input_delay)
+{
+    uint8_t d[9];
+    if (state != NP_CODE) { snprintf(error, sizeof error, "Netplay: get your own code first"); return false; }
+    if (!decode(theirs, d)) { snprintf(error, sizeof error, "Netplay: that code is not right - check it"); return false; }
+    char canon[24];
+    encode(d, canon);
+    if (!strcmp(canon, my_code)) { snprintf(error, sizeof error, "Netplay: that is your own code"); return false; }
+    net_addr_t lan;
+    ncand = 0;
+    memcpy(cand[0].ip, d, 4);
+    cand[0].port = (uint16_t)(d[4] << 8 | d[5]);
+    ncand = 1;
+    if (net_local(&lan) && (d[6] || d[7])) {        // the same network: their LAN address too
+        cand[1] = lan;
+        cand[1].ip[2] = d[6]; cand[1].ip[3] = d[7];
+        cand[1].port = cand[0].port;                // (their socket's own port is not in the code)
+        if (lan.port) cand[1].port = lan.port;      // both programs bind the same configured port
+        ncand = 2;
+    }
+    host = strcmp(my_code, canon) < 0;
+    delay = input_delay;
+    code_session = true;
+    code_since = last_heard = net_now_ms();
+    disk_have = 0;
+    peer = cand[0];
+    state = host ? NP_HOSTING : NP_JOINING;
+    snprintf(status, sizeof status, "Connecting (you are player %d)...", host ? 1 : 2);
+    error[0] = 0;
     return true;
 }
 
@@ -338,6 +456,11 @@ static void handle_packet(const uint8_t *b, int n, const net_addr_t *from)
     if (get32(&r) != MAGIC) return;
     int type = get8(&r);
     if (state == NP_HOSTING && type == P_HELLO) {
+        if (code_session) {
+            bool known = false;
+            for (int i = 0; i < ncand; i++) known |= !memcmp(from->ip, cand[i].ip, 4);
+            if (!known) return;
+        }
         uint32_t ver = get32(&r);
         uint64_t cid = get64(&r), did = get64(&r);
         int their_delay = get8(&r);
@@ -363,6 +486,8 @@ static void handle_packet(const uint8_t *b, int n, const net_addr_t *from)
         snprintf(status, sizeof status, "Player found at %s, syncing", net_addr_str(from));
         return;
     }
+    if (state == NP_JOINING && code_session && type == P_WELCOME)
+        for (int i = 0; i < ncand; i++) if (net_addr_eq(from, &cand[i])) peer = cand[i];
     if (!net_addr_eq(from, &peer)) return;
     last_heard = net_now_ms();
     switch (type) {
@@ -428,14 +553,29 @@ int netplay_update(uint16_t local_input)
         if (state == NP_OFF) return 0;
     }
     double now = net_now_ms();
+    pkt_t p;
+    if (state == NP_CODE) {                     // waiting for the other code: keep the router's door open
+        if (now > keepalive_at) { net_keepalive(); keepalive_at = now + 15000; }
+        return 0;
+    }
+    if (code_session && (state == NP_HOSTING || state == NP_JOINING) && now - code_since > 30000) {
+        fail("could not reach the other player - check both codes; some networks (mobile data) block this");
+        return 0;
+    }
     // generous until the other side has finished powering on and sends input
     double timeout = state == NP_RUNNING && got_input ? TIMEOUT_MS : 30000;
     if (state != NP_HOSTING && now - last_heard > timeout) {
         fail(state == NP_RUNNING ? "connection lost" : "no answer from the host");
         return 0;
     }
-    pkt_t p;
     switch (state) {
+    case NP_HOSTING:
+        if (code_session && now - last_sent > 200) {    // open this side's router to them
+            begin(&p, P_PUNCH);
+            for (int i = 0; i < ncand; i++) net_send(&cand[i], p.b, p.n);
+            last_sent = now;
+        }
+        return 0;
     case NP_JOINING:
         if (now - last_sent > 250) {
             begin(&p, P_HELLO);
@@ -443,7 +583,8 @@ int netplay_update(uint16_t local_input)
             put64(&p, compat_id());
             put64(&p, ide_image_id());
             put8(&p, (uint8_t)delay);
-            send_pkt(&p);
+            if (code_session) { for (int i = 0; i < ncand; i++) net_send(&cand[i], p.b, p.n); last_sent = now; }
+            else send_pkt(&p);
         }
         return 0;
     case NP_SEND_DISK: {

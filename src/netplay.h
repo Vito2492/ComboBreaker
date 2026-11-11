@@ -15,6 +15,11 @@ typedef void (*np_reset_fn)(void);
 void netplay_set_callbacks(np_run_fn run, np_reset_fn reset);
 bool netplay_host(int port, int input_delay);
 bool netplay_join(const char *host, int port, int input_delay);
+// Connecting by codes, without setting up a router or VPN: get this side's
+// code (NULL on failure, see netplay_take_error), give it to the other
+// player, then connect with theirs. The smaller code hosts.
+const char *netplay_code_prepare(int port);
+bool netplay_code_connect(const char *their_code, int input_delay);
 void netplay_stop(void);
 
 // Call once per display frame. Handles connecting; once running, returns the

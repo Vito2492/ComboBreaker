@@ -613,11 +613,12 @@ enum { S_VOLUME, S_MUTE_BG, S_PAUSE_BG, S_VERSION, S_DIFFICULTY, S_FREEPLAY, S_B
 // Practice
 enum { T_TRAINING, T_INPUTS, T_RECORD, T_PLAY, T_BACK, T_COUNT };
 // Netplay
-enum { N_HOST, N_JOIN, N_ADDRESS, N_PORT, N_DELAY, N_DISCONNECT, N_BACK, N_COUNT };
+enum { N_MYCODE, N_THEIRCODE, N_CODECONNECT, N_HOST, N_JOIN, N_ADDRESS, N_PORT, N_DELAY, N_DISCONNECT, N_BACK, N_COUNT };
+static char my_code[32], their_code[32];    // connecting by codes
 
 static bool menu_open, menu_changed, quit_requested;
 static int menu_page, menu_sel;
-static int editing = -1;             // N_ADDRESS or N_PORT while typing into it
+static int editing = -1;             // N_ADDRESS, N_PORT or N_THEIRCODE while typing into it
 static char edit_buf[256];
 static int bind_set;                 // PG_BIND: 0 P1 keys, 1 P2 keys, 2 pad buttons, 3 hotkeys, 4 pad hotkeys
 static int capturing = -1;           // row waiting for a key or button
@@ -867,8 +868,12 @@ static void draw_menu(uint32_t *out)
         break;
     case PG_NETPLAY:
         title = "NETPLAY";
-        snprintf(b[N_HOST], 72, "Host a game\tport %d", cfg.net_port);
-        snprintf(b[N_JOIN], 72, "Join a game");
+        snprintf(b[N_MYCODE], 72, "Get my code\t%s", *my_code ? my_code : "");
+        if (editing == N_THEIRCODE) snprintf(b[N_THEIRCODE], 72, "Their code\t%.24s_", edit_buf);
+        else snprintf(b[N_THEIRCODE], 72, "Their code\t%.24s", *their_code ? their_code : "(enter)");
+        snprintf(b[N_CODECONNECT], 72, "Connect with their code");
+        snprintf(b[N_HOST], 72, "Direct: host a game\tport %d", cfg.net_port);
+        snprintf(b[N_JOIN], 72, "Direct: join a game");
         if (editing == N_ADDRESS) snprintf(b[N_ADDRESS], 72, "Address\t%.40s_", edit_buf);
         else snprintf(b[N_ADDRESS], 72, "Address\t%.40s", *cfg.net_address ? cfg.net_address : "(enter)");
         if (editing == N_PORT) snprintf(b[N_PORT], 72, "Port\t%.10s_", edit_buf);
@@ -979,7 +984,7 @@ static void menu_change(int dir)
         case M_CONTROLS: if (!dir) go(PG_CONTROLS, 0); return;
         case M_GAME: if (!dir) go(PG_GAME, 0); return;
         case M_PRACTICE: if (!dir) go(PG_PRACTICE, 0); return;
-        case M_NETPLAY: if (!dir) go(PG_NETPLAY, netplay_active() ? N_DISCONNECT : N_HOST); return;
+        case M_NETPLAY: if (!dir) go(PG_NETPLAY, netplay_active() ? N_DISCONNECT : N_MYCODE); return;
         case M_RESET:
             if (dir) return;
             if (in_netplay()) { not_in_netplay(); return; }
@@ -1158,6 +1163,29 @@ static void menu_change(int dir)
 
     case PG_NETPLAY:
         switch (menu_sel) {
+        case N_MYCODE: {
+            if (dir) return;
+            osd_message("Getting your code...");
+            const char *c = netplay_code_prepare(cfg.net_port);
+            if (!c) { osd_message("%s", netplay_take_error()); my_code[0] = 0; return; }
+            snprintf(my_code, sizeof my_code, "%s", c);
+            SDL_SetClipboardText(my_code);
+            osd_message("Your code %s (copied): send it to the other player", my_code);
+            break;
+        }
+        case N_THEIRCODE:
+            if (dir) return;
+            editing = N_THEIRCODE;
+            snprintf(edit_buf, sizeof edit_buf, "%s", their_code);
+            SDL_StartTextInput();
+            return;
+        case N_CODECONNECT:
+            if (dir) return;
+            if (!*my_code || !netplay_active()) { osd_message("Get your code first, and send it to the other player"); return; }
+            if (!*their_code) { osd_message("Enter the other player's code first"); return; }
+            if (netplay_code_connect(their_code, cfg.net_delay)) { osd_message("Connecting..."); menu_close(); }
+            else osd_message("%s", netplay_take_error());
+            return;
         case N_HOST:
             if (dir) return;
             if (netplay_host(cfg.net_port, cfg.net_delay)) osd_message("Hosting on port %d: waiting for a player", cfg.net_port);
@@ -1225,9 +1253,13 @@ static void edit_key(SDL_Scancode sc, const char *text)
         return;
     }
     size_t n = strlen(edit_buf);
-    if (sc == SDL_SCANCODE_BACKSPACE && n) edit_buf[n - 1] = 0;
+    if (sc == SDL_SCANCODE_V && SDL_GetModState() & (KMOD_CTRL | KMOD_GUI) && SDL_HasClipboardText()) {
+        char *clip = SDL_GetClipboardText();     // paste a code or an address
+        if (clip) { edit_key(SDL_SCANCODE_UNKNOWN, clip); SDL_free(clip); }
+    } else if (sc == SDL_SCANCODE_BACKSPACE && n) edit_buf[n - 1] = 0;
     else if (sc == SDL_SCANCODE_RETURN || sc == SDL_SCANCODE_KP_ENTER) {
-        if (editing == N_ADDRESS) snprintf(cfg.net_address, sizeof cfg.net_address, "%s", edit_buf);
+        if (editing == N_THEIRCODE) snprintf(their_code, sizeof their_code, "%s", edit_buf);
+        else if (editing == N_ADDRESS) snprintf(cfg.net_address, sizeof cfg.net_address, "%s", edit_buf);
         else if (atoi(edit_buf) > 0 && atoi(edit_buf) < 65536) cfg.net_port = atoi(edit_buf);
         editing = -1;
         menu_changed = true;

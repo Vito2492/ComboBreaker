@@ -19,5 +19,12 @@ bool net_addr_eq(const net_addr_t *a, const net_addr_t *b);
 const char *net_addr_str(const net_addr_t *a);
 double net_now_ms(void);
 
+// This socket's address and port as the internet sees them (asks a public
+// STUN server; blocks up to about 2 s), and on the local network.
+bool net_stun(net_addr_t *pub);
+bool net_local(net_addr_t *out);
+// Keeps the router's mapping of this socket alive (call every ~15 s).
+void net_keepalive(void);
+
 // Testing: delay every outgoing packet by latency +- jitter ms and drop loss_pct %.
 void net_simulate(int latency_ms, int jitter_ms, int loss_pct);
