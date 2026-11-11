@@ -32,3 +32,4 @@ ki1.ini
 /android/app/.cxx/
 /android/local.properties
 /android/app/src/main/jniLibs/
+/android/app/src/main/assets/

@@ -45,11 +45,11 @@ jobs:
           mkdir -p $out/run $out/tools $out/licenses
           cp dist/windows/UltraCombo.exe $out/ComboBreaker.exe
           cp dist/windows/SDL2.dll $out/
+          mkdir -p $out/licenses && cp deps/sdl2-mingw/SDL2-$SDL/LICENSE.txt $out/licenses/SDL2-LICENSE.txt 2>/dev/null || true
           cp -r shaders $out/
           cp -r zig $out/tools/zig
           cp README.md $out/
-          cp LICENSE $out/licenses/UltraCombo-ComboBreaker-LICENSE.txt
-          cp tools/fonts/OFL-PressStart2P.txt $out/licenses/
+          sh tools/licenses.sh $out/licenses
           cp zig/LICENSE $out/licenses/Zig-LICENSE.txt
           cp tools/run-readme.txt $out/run/PUT-GAME-FILES-HERE.txt
           zip -qr9 ComboBreaker-Windows.zip $out
@@ -85,11 +85,11 @@ jobs:
           mkdir -p $out/run $out/tools $out/licenses
           cp ultracombo $out/combobreaker
           mkdir -p $out/lib && cp -L /usr/local/lib/libSDL2-2.0.so.0 $out/lib/
+          cp SDL2-$SDL/LICENSE.txt $out/licenses/SDL2-LICENSE.txt
           cp -r shaders $out/
           cp -r zig $out/tools/zig
           cp README.md $out/
-          cp LICENSE $out/licenses/UltraCombo-ComboBreaker-LICENSE.txt
-          cp tools/fonts/OFL-PressStart2P.txt $out/licenses/
+          sh tools/licenses.sh $out/licenses
           cp zig/LICENSE $out/licenses/Zig-LICENSE.txt
           cp tools/run-readme.txt $out/run/PUT-GAME-FILES-HERE.txt
           tar -cJf ComboBreaker-Linux.tar.xz $out
@@ -121,8 +121,7 @@ jobs:
           cp -r shaders $out/
           cp -r zig $out/tools/zig
           cp README.md $out/
-          cp LICENSE $out/licenses/UltraCombo-ComboBreaker-LICENSE.txt
-          cp tools/fonts/OFL-PressStart2P.txt $out/licenses/
+          sh tools/licenses.sh $out/licenses
           cp zig/LICENSE $out/licenses/Zig-LICENSE.txt
           cp tools/run-readme.txt $out/run/PUT-GAME-FILES-HERE.txt
           tar -cJf ComboBreaker-macOS.tar.xz $out
@@ -157,6 +156,7 @@ jobs:
               -DTARGETOS_ANDROID=1 -DCONFIG_TRIPLET="\"$triple-linux-android\"" -I. libtcc.c \
               -o ../android/app/src/main/jniLibs/$abi/libtcc.so -lm -ldl
           done
+          cd .. && sh tools/licenses.sh android/app/src/main/assets/licenses SDL2-$SDL tinycc
       - name: Signing key
         # Only the keystore is secret (ANDROID_KEYSTORE_B64). Its password
         # is not: it would only guard the file, which is already a secret.
