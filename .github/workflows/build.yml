@@ -1,6 +1,6 @@
 # Builds ComboBreaker for Windows, Linux and macOS on every push, and
-# attaches the packages to a release when one is published on GitHub (its tag
-# v*), or makes a draft release when a tag v* is pushed. The packages
+# attaches the packages to a release when one is published on GitHub with a
+# tag v*. The packages
 # hold the program, a Zig compiler (to build the game's code on the player's
 # machine at first launch), SDL2 and the shaders: no game files, no game code.
 name: build
@@ -8,7 +8,6 @@ name: build
 on:
   push:
     branches: [main]
-    tags: ['v*']
   release:
     types: [published]
   workflow_dispatch:
@@ -134,7 +133,7 @@ jobs:
         with: { merge-multiple: true }
       - uses: softprops/action-gh-release@v2
         with:
-          draft: ${{ github.event_name == 'push' }}
+          draft: false
           files: |
             ComboBreaker-Windows.zip
             ComboBreaker-Linux.tar.xz
