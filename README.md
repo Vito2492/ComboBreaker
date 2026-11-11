@@ -18,6 +18,8 @@ changes nothing in how the arcade game runs.
 
 *[En español, más abajo](#en-español).*
 
+**New here? Read the [guide](docs/GUIDE.md)** · **¿Primera vez? Leé la [guía](docs/GUIA.md)**: installing, where the game files go, controls, modes and codes.
+
 ## What ComboBreaker adds
 
 Press Start in the attract loop for the arcade's own title screen, then Start
@@ -189,6 +191,8 @@ azar); la música de cada escenario.
 **Requisitos:** Windows 10/11 de 64 bits o Linux, casi cualquier PC de los
 últimos diez años, 1 GB de RAM libre, una placa de video con OpenGL 2.1 y unos
 400 MB de disco. La primera vez el programa tarda un minuto en prepararse.
+
+**Guía completa paso a paso:** [docs/GUIA.md](docs/GUIA.md).
 
 **Qué necesitás:** tus propios archivos del juego, obtenidos legalmente: el
 set `kinst` de MAME, versión L1.5D. Son 10 archivos: `ki-l15d.u98` (ROM de

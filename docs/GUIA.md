@@ -1,0 +1,179 @@
+# Guía de ComboBreaker
+
+ComboBreaker es el Killer Instinct de arcade (1994) con los menús y modos de
+la versión de Super Nintendo. Esta guía explica cómo instalarlo, dónde van
+los archivos del juego y cómo se juega.
+
+*[English version](GUIDE.md).*
+
+## 1. Lo que necesitás
+
+- Una PC con Windows 10 u 11 (64 bits), Linux o una Mac con procesador Apple
+  (M1 o posterior). Casi cualquier PC de los últimos diez años alcanza.
+- **Tus propios archivos del juego.** ComboBreaker no trae ninguno, y nunca
+  los va a traer: son del juego original y tienen dueño. Necesitás el set
+  `kinst` de MAME, versión **L1.5D**, obtenido de forma legal. Son 10
+  archivos:
+
+| Archivo | Qué es |
+|---|---|
+| `ki-l15d.u98` | ROM de arranque, versión L1.5D |
+| `u10-l1`, `u11-l1`, `u12-l1`, `u13-l1` | ROMs de sonido |
+| `u33-l1`, `u34-l1`, `u35-l1`, `u36-l1` | ROMs de sonido |
+| `kinst.chd` | el disco rígido de la máquina (unos 95 MB) |
+
+Los tamaños y checksums exactos están en el [README](../README.md#what-you-need-the-game-files).
+Si tenés el set como un `kinst.zip` de MAME (con la carpeta `kinst` y el
+`kinst.chd` adentro al lado), también sirve: ver el paso 3.
+
+## 2. Descargar
+
+1. Entrá a la página de
+   [Releases](https://github.com/Vito2492/ComboBreaker/releases) y bajá el
+   paquete de tu sistema:
+   - Windows: `ComboBreaker-Windows.zip`
+   - Linux: `ComboBreaker-Linux.tar.xz`
+   - Mac: `ComboBreaker-macOS.tar.xz` (todavía **no probado** en una Mac:
+     si lo probás, contanos cómo te fue)
+2. Descomprimilo donde quieras, por ejemplo en `Documentos\ComboBreaker`.
+   No hace falta instalar nada.
+
+## 3. Poner los archivos del juego
+
+Adentro de la carpeta de ComboBreaker hay una carpeta `run`. Copiá ahí los
+10 archivos, con esos nombres exactos:
+
+```
+ComboBreaker/
+├── ComboBreaker.exe        (en Linux y Mac: combobreaker)
+└── run/
+    ├── ki-l15d.u98
+    ├── u10-l1  u11-l1  u12-l1  u13-l1
+    ├── u33-l1  u34-l1  u35-l1  u36-l1
+    └── kinst.chd
+```
+
+Si te falta alguno, el programa te dice cuál, te muestra esta lista y tiene
+un botón para abrir la carpeta `run`. Si alguno está mal (otra versión, un
+archivo dañado), también te lo dice.
+
+Con un `kinst.zip` de MAME: arrastralo sobre `ComboBreaker.exe`, o abrilo
+desde la línea de comandos: `ComboBreaker.exe ruta\a\kinst.zip`.
+
+## 4. Primer arranque
+
+- **Windows:** doble clic en `ComboBreaker.exe`. Como el programa no está
+  firmado, Windows puede mostrar "Windows protegió su PC": tocá *Más
+  información* y después *Ejecutar de todas formas*.
+- **Linux:** ejecutá `./combobreaker` desde la carpeta.
+- **Mac:** la primera vez, clic derecho sobre `combobreaker` → *Abrir*. Si
+  dice que está dañado o que no se puede verificar, en la Terminal, dentro de
+  la carpeta: `xattr -dr com.apple.quarantine .` y probá de nuevo.
+
+**La primera vez tarda alrededor de un minuto** antes de mostrar el juego: el
+programa prepara el código del juego para tu computadora. Lo hace una sola
+vez y lo guarda en la carpeta `cache`.
+
+## 5. Cómo se juega
+
+El juego arranca con la introducción y la demo del arcade, como la máquina.
+Apretá **Start** para ir a la pantalla de título y **Start** otra vez para
+abrir el menú de la Super Nintendo.
+
+### Controles
+
+| | Teclado, jugador 1 | Teclado, jugador 2 | Joystick |
+|---|---|---|---|
+| Moverse | Flechas | I J K L | Cruz o palanca izquierda |
+| Puño débil / medio / fuerte | A S D | T Y U | L, Y, X |
+| Patada débil / media / fuerte | Z X C | G H B | R, B, A |
+| Start | 1 | 2 | Start |
+
+El joystick usa la distribución del Super Nintendo (los nombres son los de un
+mando de Nintendo: Y a la izquierda, B abajo, A a la derecha, X arriba). Sirve
+cualquier joystick: Xbox, PlayStation, Switch, 8BitDo y la mayoría de los
+demás. El primero que conectes es el jugador 1 y el segundo, el jugador 2.
+
+**En los menús:** A (o Start) elige y B vuelve atrás. Van siempre por la
+posición del botón, aunque cambies los controles del juego. En el teclado:
+Enter elige y Retroceso vuelve.
+
+### Los modos
+
+- **1 Player Game:** el arcade de siempre, contra la máquina hasta Eyedol.
+- **2 Player Game:** uno contra uno. Al terminar cada pelea los dos vuelven a
+  elegir personaje (la revancha de la consola), sin continue ni récords.
+- **Tournament Game:** de 2 a 8 jugadores. Cada uno pone su nombre de tres
+  letras. Antes de cada pelea aparece **NEXT FIGHT** con los dos que pelean,
+  su récord de victorias y derrotas, y abajo la lista de los que esperan. El
+  ganador se queda y pelea contra el siguiente de la lista; el que pierde va
+  al final de la fila. La pantalla de victoria (Supreme, Awesome, Perfect) se
+  ve completa; los récords y el continue del arcade no aparecen.
+- **Practice Game:** el jugador 1 elige los dos personajes. El rival se queda
+  quieto y nadie pierde vida. Sin barras ni reloj, como en la Super Nintendo.
+- **Options:** dificultad (de una a cinco estrellas), personaje al azar,
+  reloj, sangre, finishing moves, y la tabla de controles para cambiar los
+  botones de cada jugador.
+
+### Pausa
+
+En cualquier momento de una pelea de estos modos, **Start** pausa. Desde la
+pausa podés seguir o volver al menú principal.
+
+### Los códigos de la Super Nintendo
+
+- **Elegir escenario:** en la pantalla de personajes, mantené una dirección
+  y elegí tu personaje con un botón. Elige el primer jugador que confirma.
+
+| | Abajo + | Arriba + |
+|---|---|---|
+| L (puño débil) | Canyon Bridge | Ice Temple |
+| Y (puño medio) | Bloody Arena | Skull Room |
+| X (puño fuerte) | Lava Pit | Ice Sculpture |
+| R (patada débil) | City Street | Castle Roof |
+| B (patada media) | Fireplace | City Roof |
+| A (patada fuerte) | Factory | Desert Roof |
+
+  Sky Rooftop: los dos jugadores eligen con Abajo + B.
+- **Velocidad**, en la pantalla VS, manteniendo los botones hasta que empiece
+  la pelea (en dos jugadores, los dos):
+  - Izquierda + las tres patadas: lenta
+  - Derecha + los tres puños: rápida
+  - Derecha + las tres patadas: más rápida
+  - Izquierda + los tres puños: la más rápida
+
+  La música no cambia de tono.
+- **Personaje al azar:** Arriba + Start en la pantalla de personajes.
+
+### Más opciones
+
+**F1** (o el botón Guide del joystick) abre el menú propio del programa:
+pantalla completa y resolución, filtros de imagen (CRT y otros), controles,
+volumen, guardar y cargar partida, rebobinar y juego en red. Todo eso viene
+de UltraCombo y está explicado en el
+[manual de UltraCombo](UltraCombo-manual.md).
+
+Si preferís el arcade puro, sin los menús de la consola, poné
+`home_menu = no` en `ki1.ini`.
+
+## 6. Problemas comunes
+
+- **Un solo joystick mueve a los dos jugadores.** Algunos mandos (por ejemplo
+  ciertos 8BitDo) aparecen dos veces en la PC. ComboBreaker lo detecta a los
+  pocos segundos de jugar y descarta el duplicado, con un aviso en pantalla.
+- **"Falta un archivo" o "no coincide".** Revisá que los nombres sean
+  exactos (sin `.bin` ni `.zip` agregados) y que sea la versión L1.5D.
+- **Tarda mucho la primera vez.** Es normal: prepara el juego una vez. Si
+  borrás la carpeta `cache`, lo vuelve a hacer.
+- **Quiero volver a la configuración original.** Cerrá el programa y borrá
+  `ki1.ini`; se crea de nuevo al abrirlo.
+- **Algo falló.** En la carpeta del programa está `ki1.log`. Si abrís un
+  reporte en [GitHub](https://github.com/Vito2492/ComboBreaker/issues),
+  adjuntalo.
+
+## 7. Android
+
+Todavía no hay versión para Android: está en camino. Va a funcionar igual que
+en la PC, sin archivos del juego incluidos: vas a elegir tus archivos desde
+el teléfono la primera vez. Se recomienda un joystick, aunque va a tener
+controles en pantalla opcionales.
