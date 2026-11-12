@@ -28,3 +28,8 @@ void rec_build_trial_passed(void);
 void rec_build_allow_background(bool on);
 void rec_build_frame(void);
 void rec_build_wait(void);
+// The program is quitting or going to the background: the trial passed.
+void rec_build_leaving(void);
+// TinyCC's code crashed once on this device: the interpreter, without
+// trying to build again.
+bool rec_build_tcc_failed(void);
