@@ -8,6 +8,7 @@
 #include "recomp.h"
 #include "adsprec.h"
 #include "sound.h"
+#include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -447,9 +448,9 @@ void rec_build_trial_passed(void)
     if (*trial) { remove(trial); *trial = 0; }
 }
 
-static bool load_with_tcc(const char *src, char *err, size_t errlen)
+// Compiles the cached sources in memory; the module's entry in *init.
+static bool compile_tcc(const char *src, char *err, size_t errlen, rec_module_init_fn *init)
 {
-    if (!tcc_trial_start(src)) { snprintf(err, errlen, "TinyCC's code failed before"); return false; }
     tcc_api_t t;
     char libdir[2048];
     if (!load_tcc(&t, libdir, sizeof libdir)) { snprintf(err, errlen, "TinyCC (libtcc) not found"); return false; }
@@ -472,9 +473,66 @@ static bool load_with_tcc(const char *src, char *err, size_t errlen)
         if (progress_cb) progress_cb("Compiling the game code (TinyCC)", 0.35 + 0.55 * (i + 1) / ALL_SOURCES);
     }
     if (t.relocate(s) < 0) { snprintf(err, errlen, "TinyCC could not link the game code"); return false; }
-    rec_module_init_fn init = (rec_module_init_fn)t.get_symbol(s, REC_MODULE_INIT);
-    if (!init || !rec_use_module(init)) { snprintf(err, errlen, "TinyCC build is not usable"); return false; }
+    *init = (rec_module_init_fn)t.get_symbol(s, REC_MODULE_INIT);
+    if (!*init) { snprintf(err, errlen, "TinyCC build is not usable"); return false; }
     return true;    // the TCCState stays alive: it holds the code
+}
+
+static bool load_with_tcc(const char *src, char *err, size_t errlen)
+{
+    if (!tcc_trial_start(src)) { snprintf(err, errlen, "TinyCC's code failed before"); return false; }
+    rec_module_init_fn init;
+    if (!compile_tcc(src, err, errlen, &init)) return false;
+    if (!rec_use_module(init)) { snprintf(err, errlen, "TinyCC build is not usable"); return false; }
+    return true;
+}
+
+// Compiling with TinyCC at every start takes a while on a phone, so it
+// happens beside the game, which starts on the interpreter and switches to
+// the translated code between two frames once it is ready.
+static struct {
+    SDL_Thread *thread;
+    char src[2300], err[512];
+    rec_module_init_fn init;
+    SDL_atomic_t done;
+    double started;
+    int frames;                         // since the code took over (the trial)
+    bool active;
+} bg;
+
+static int bg_compile(void *unused)
+{
+    (void)unused;
+    if (!compile_tcc(bg.src, bg.err, sizeof bg.err, &bg.init)) bg.init = NULL;
+    SDL_AtomicSet(&bg.done, 1);
+    return 0;
+}
+
+static bool start_background(const char *src)
+{
+    if (!tcc_trial_start(src)) return false;
+    snprintf(bg.src, sizeof bg.src, "%s", src);
+    SDL_AtomicSet(&bg.done, 0);
+    bg.started = SDL_GetTicks() / 1000.0;
+    bg.thread = SDL_CreateThread(bg_compile, "tinycc", NULL);
+    return bg.thread != NULL;
+}
+
+void rec_build_wait(void)
+{
+    if (!bg.thread) return;
+    SDL_WaitThread(bg.thread, NULL);
+    bg.thread = NULL;
+    if (bg.init && rec_use_module(bg.init)) {
+        bg.active = true;
+        fprintf(stderr, "rec: translated code ready (TinyCC, %.0f s beside the game)\n", SDL_GetTicks() / 1000.0 - bg.started);
+    } else fprintf(stderr, "rec: TinyCC failed (%s): the game stays on the interpreter\n", bg.err);
+}
+
+void rec_build_frame(void)
+{
+    if (bg.thread && SDL_AtomicGet(&bg.done)) rec_build_wait();
+    if ((bg.active || rec_enabled) && *trial && ++bg.frames >= 600) rec_build_trial_passed();
 }
 
 /* ---------------------------------------------------------------- */
@@ -490,6 +548,9 @@ static int count_sources(const char *src)
     }
 }
 
+static bool background_ok;
+void rec_build_allow_background(bool on) { background_ok = on; }
+
 bool rec_build_load_cached(char *msg, size_t msglen)
 {
     char dir[2048], module[2300], src[2300], err[512];
@@ -501,6 +562,10 @@ bool rec_build_load_cached(char *msg, size_t msglen)
     char marker[2400];
     tcc_marker(src, marker, sizeof marker);
     nsources = count_sources(src);
+    if (nsources && file_exists(marker) && background_ok && start_background(src)) {
+        snprintf(msg, msglen, "translated code being built with TinyCC beside the game");
+        return true;
+    }
     if (nsources && file_exists(marker) && load_with_tcc(src, err, sizeof err)) {
         snprintf(msg, msglen, "translated code built with TinyCC");
         return true;

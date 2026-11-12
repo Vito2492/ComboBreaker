@@ -21,3 +21,10 @@ bool rec_build_load_file(const char *path, char *err, size_t errlen);
 // The game has run a while on code built this session (Android keeps TinyCC's
 // code on trial until then).
 void rec_build_trial_passed(void);
+// With TinyCC, rec_build_load_cached may compile beside the game instead of
+// before it (when allowed): call rec_build_frame between frames to switch to
+// the code once ready (and for the trial), rec_build_wait to have it now
+// (before netplay: both sides must run the same code).
+void rec_build_allow_background(bool on);
+void rec_build_frame(void);
+void rec_build_wait(void);
