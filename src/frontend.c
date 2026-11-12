@@ -1409,7 +1409,8 @@ static void emulate_frame(void)
     training_apply(true);
     run_frame();
     state_checkpoint();
-    if (++frame_count >= 600) rec_build_trial_passed();
+    frame_count++;
+    rec_build_frame();                  // TinyCC's code, once built beside the game
     rumble_check();
     perf_emu(t0);
 }
@@ -1441,6 +1442,7 @@ static void np_run(const uint16_t in[2], bool resim)
 
 static void np_reset(void)
 {
+    rec_build_wait();                   // both sides must run the same kind of code
     osd_message("Netplay: syncing...");
     present("NETPLAY");
     stop_audio();
@@ -1529,6 +1531,7 @@ static void prepare_game_code(void)
 {
     if (rec_enabled || getenv("KI2_NOREC")) return;
     char msg[512];
+    rec_build_allow_background(true);
     if (rec_build_load_cached(msg, sizeof msg)) { fprintf(stderr, "rec: %s\n", msg); return; }
     uint64_t t0 = SDL_GetTicks64();
     bool ok = rec_build(prepare_progress, msg, sizeof msg);
