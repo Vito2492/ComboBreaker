@@ -1293,6 +1293,7 @@ static bool handle_events(void)
 #endif
         switch (ev.type) {
         case SDL_QUIT: return false;
+        case SDL_APP_WILLENTERBACKGROUND: rec_build_leaving(); break;
         case SDL_CONTROLLERDEVICEADDED: pad_added(ev.cdevice.which); break;
         case SDL_CONTROLLERDEVICEREMOVED: pad_removed(ev.cdevice.which); break;
         case SDL_WINDOWEVENT:
@@ -1533,6 +1534,7 @@ static void prepare_game_code(void)
     char msg[512];
     rec_build_allow_background(true);
     if (rec_build_load_cached(msg, sizeof msg)) { fprintf(stderr, "rec: %s\n", msg); return; }
+    if (rec_build_tcc_failed()) { fprintf(stderr, "rec: TinyCC's code crashed before on this device: interpreter\n"); return; }
     uint64_t t0 = SDL_GetTicks64();
     bool ok = rec_build(prepare_progress, msg, sizeof msg);
     fprintf(stderr, "rec: %s (%.0f s)\n", msg, (SDL_GetTicks64() - t0) / 1000.0);
@@ -1726,6 +1728,7 @@ int frontend_main(void)
     }
     cfg.fullscreen = fullscreen;
     cfg.volume = volume;
+    rec_build_leaving();                // a clean quit: TinyCC's trial passed
     config_save();
     video_close();
     SDL_Quit();

@@ -427,7 +427,7 @@ static bool tcc_trial_start(const char *src)
 {
 #ifdef __ANDROID__
     char failed[2400];
-    snprintf(failed, sizeof failed, "%s/tcc-failed", src);
+    snprintf(failed, sizeof failed, "%s/tcc-failed-2", src);
     snprintf(trial, sizeof trial, "%s/tcc-trial", src);
     if (file_exists(failed)) { *trial = 0; return false; }
     if (file_exists(trial)) {
@@ -446,6 +446,22 @@ static bool tcc_trial_start(const char *src)
 void rec_build_trial_passed(void)
 {
     if (*trial) { remove(trial); *trial = 0; }
+}
+
+// The trial only catches crashes: a clean quit, or the app going to the
+// background (where Android may close it), ends it as passed.
+void rec_build_leaving(void) { rec_build_trial_passed(); }
+
+bool rec_build_tcc_failed(void)
+{
+#ifdef __ANDROID__
+    char dir[2048], module[2300], src[2300], failed[2400];
+    cache_paths(dir, sizeof dir, module, sizeof module, src, sizeof src);
+    snprintf(failed, sizeof failed, "%s/tcc-failed-2", src);
+    return file_exists(failed);
+#else
+    return false;
+#endif
 }
 
 // Compiles the cached sources in memory; the module's entry in *init.
