@@ -525,6 +525,19 @@ void home_reset(void)
     h.press = 0;
 }
 
+// A state was loaded: close any page, and carry on in the mode the state
+// shows (one player: the arcade game; two: 2 Player), so the pause works.
+void home_state_loaded(void)
+{
+    home_reset();
+    h.seq_wait = 0;
+    h.title_wait = h.menu_after_title = h.left_menu = h.restore = false;
+    tn.next = false;
+    memset(h.prev, 0xff, sizeof h.prev);
+    if (!home_enabled() || !playing()) return;
+    h.mode = in_game(0) && in_game(1) ? MODE_VS : MODE_ARCADE;
+}
+
 bool home_paused(void) { return h.page == PAGE_PAUSE; }
 bool home_menu_open(void) { return h.page != PAGE_CLOSED && h.page != PAGE_PAUSE; }
 
