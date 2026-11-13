@@ -247,7 +247,7 @@ static void stage_frame(uint32_t held[2])
 enum { MODE_NONE, MODE_ARCADE, MODE_VS, MODE_TOURNAMENT, MODE_PRACTICE };
 enum { PAGE_CLOSED, PAGE_MAIN, PAGE_OPTIONS, PAGE_PAUSE, PAGE_ROSTER, PAGE_NEXT };
 enum { MAIN_ARCADE, MAIN_VS, MAIN_TOURNAMENT, MAIN_PRACTICE, MAIN_OPTIONS, MAIN_COUNT };
-enum { OPT_DIFFICULTY, OPT_FIXED, OPT_RANDOM, OPT_TIMER, OPT_BLOOD, OPT_FINISH,
+enum { OPT_DIFFICULTY, OPT_FIXED, OPT_RANDOM, OPT_TIMER, OPT_BLOOD, OPT_FINISH, OPT_BREAKER,
        OPT_WP, OPT_MP, OPT_FP, OPT_WK, OPT_MK, OPT_FK, OPT_RESET, OPT_EXIT, OPT_COUNT };
 enum { PAUSE_CONTINUE, PAUSE_DUMMY, PAUSE_LEVEL, PAUSE_MENU, PAUSE_COUNT };   // DUMMY: Practice only, LEVEL: against the CPU
 
@@ -624,6 +624,7 @@ static void change_option(int dir)
         break;
     }
     case OPT_FIXED: cfg.home_fixed = !cfg.home_fixed; break;
+    case OPT_BREAKER: cfg.easy_breaker = !cfg.easy_breaker; break;
     case OPT_RANDOM: cfg.home_random = !cfg.home_random; break;
     case OPT_TIMER: cfg.home_timer = !cfg.home_timer; break;
     case OPT_BLOOD: cfg.blood = ((cfg.blood + d) % 4 + 4) % 4; h.switches_changed = true; break;
@@ -1075,8 +1076,8 @@ static void draw_options(uint32_t *ov)
     text_c(ov, F_BIG, 8, "OPTIONS", C_ITEM, a);
     int dl = adjust_difficulty();
     char line[48];
-    for (int i = OPT_DIFFICULTY; i <= OPT_FINISH; i++) {
-        int y = 32 + i * 12;
+    for (int i = OPT_DIFFICULTY; i <= OPT_BREAKER; i++) {
+        int y = 30 + i * 11;
         uint32_t c = i == h.sel ? C_SEL : C_ITEM;
         switch (i) {
         case OPT_DIFFICULTY:
@@ -1088,18 +1089,19 @@ static void draw_options(uint32_t *ov)
         case OPT_RANDOM: snprintf(line, sizeof line, "RANDOM SELECT: %s", cfg.home_random ? "ON" : "OFF"); break;
         case OPT_TIMER: snprintf(line, sizeof line, "TIMER: %s", cfg.home_timer ? "ON" : "OFF"); break;
         case OPT_BLOOD: snprintf(line, sizeof line, "BLOOD: %s", blood_names[cfg.blood & 3]); break;
-        default: snprintf(line, sizeof line, "FINISHING MOVES: %s", cfg.finishing_moves ? "ON" : "OFF"); break;
+        case OPT_FINISH: snprintf(line, sizeof line, "FINISHING MOVES: %s", cfg.finishing_moves ? "ON" : "OFF"); break;
+        default: snprintf(line, sizeof line, "EASY COMBO BREAKER: %s", cfg.easy_breaker ? "ON" : "OFF"); break;
         }
         text(ov, F_BODY, 20, y, line, c, a);
     }
     // the controls table: the move, then each player's SNES button
     static const char *const moves[6] = { "WEAK PUNCH:", "MEDIUM PUNCH:", "FIERCE PUNCH:", "WEAK KICK:", "MEDIUM KICK:", "FIERCE KICK:" };
-    text(ov, F_BODY, 20, 108, "CONTROLS:", C_ITEM, a);
-    text(ov, F_BODY, 222, 108, "P1", C_ITEM, a);
-    text(ov, F_BODY, 272, 108, "P2", C_ITEM, a);
+    text(ov, F_BODY, 20, 120, "CONTROLS:", C_ITEM, a);
+    text(ov, F_BODY, 222, 120, "P1", C_ITEM, a);
+    text(ov, F_BODY, 272, 120, "P2", C_ITEM, a);
     bool blink = (h.anim / 12) % 2 == 0;
     for (int m = 0; m < 6; m++) {
-        int y = 122 + m * 12, row = OPT_WP + m;
+        int y = 132 + m * 11, row = OPT_WP + m;
         text(ov, F_BODY, 206 - text_width(F_BODY, moves[m]), y, moves[m], row == h.sel ? C_SEL : C_HELP, a);
         for (int p = 0; p < 2; p++) {
             char l[2] = { cfg.home_pad[p][m] ? cfg.home_pad[p][m] : pad_letters[m], 0 };
@@ -1109,8 +1111,8 @@ static void draw_options(uint32_t *ov)
         }
     }
     for (int p = 0; p < 2; p++)
-        text(ov, F_SMALL, 207 + p * 50, 196, "RESET", h.sel == OPT_RESET && p == h.col ? C_SEL : C_ITEM, a);
-    text(ov, F_BODY, 20, 196, "EXIT", h.sel == OPT_EXIT ? C_SEL : C_ITEM, a);
+        text(ov, F_SMALL, 207 + p * 50, 201, "RESET", h.sel == OPT_RESET && p == h.col ? C_SEL : C_ITEM, a);
+    text(ov, F_BODY, 20, 200, "EXIT", h.sel == OPT_EXIT ? C_SEL : C_ITEM, a);
     const char *help = h.sel >= OPT_WP && h.sel <= OPT_FK ? "PRESS A BUTTON   LEFT/RIGHT: P1/P2"
                      : h.switches_changed ? "RESTARTS ON EXIT TO APPLY" : "LEFT/RIGHT: CHANGE";
     text_c(ov, F_SMALL, 222, help, C_DIM, a);

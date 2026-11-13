@@ -119,7 +119,10 @@ and Backspace.
   select, timer, blood, finishing moves, and the controls table to remap
   each player's buttons. The arcade game gets harder fight by fight; with
   **FIXED DIFFICULTY: YES** the CPU stays at the chosen difficulty's first
-  level for the whole game.
+  level for the whole game. With **EASY COMBO BREAKER: ON**, any attack
+  button breaks a combo you are taking, in every mode: the program does your
+  fighter's breaker move at the strength that breaks the hit coming in (if
+  it doesn't take, press again and it tries the next strength).
 
 ### Pause
 

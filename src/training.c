@@ -118,9 +118,75 @@ static uint32_t stance(void)
     }
 }
 
+// EASY COMBO BREAKER: while the other fighter is landing a combo on a
+// player, any attack button does that player's breaker move for it, at the
+// strength that breaks the hit coming in (a quick breaks a medium, a medium
+// a fierce, a fierce a quick); pressed again in the same combo, it tries the
+// next strength. The game still decides, as if the move had been done by
+// hand. Players only, not the CPU.
+static struct { uint32_t seq[16]; int len, pos, tries; uint32_t prev; } brk[2];
+
+static int breaker_moves(int p, uint32_t seq[16])
+{
+    if (!game.fighter_combo || !game.fighter_slot || !game.fighter_x) return 0;
+    unsigned slot = ram2[game.fighter_slot + (uint32_t)p * game.player_step];
+    const char *m = slot < 11 ? game.breakers[slot] : NULL;
+    if (!m) return 0;
+    int32_t me, them;
+    memcpy(&me, &ram2[game.fighter_x + (uint32_t)p * HEALTH_STEP], 4);
+    memcpy(&them, &ram2[game.fighter_x + (uint32_t)(1 - p) * HEALTH_STEP], 4);
+    uint32_t fwd = 1u << (them > me ? BTN_RIGHT : BTN_LEFT), back = 1u << (them > me ? BTN_LEFT : BTN_RIGHT);
+    // the strength that breaks the attack coming in, then the next ones
+    unsigned s = ram2[game.fighter_strength + (uint32_t)(1 - p) * HEALTH_STEP];
+    int want = s & 1 ? 2 : s & 2 ? 0 : s & 4 ? 1 : 0;          // 0 quick, 1 medium, 2 fierce
+    want = (want + brk[p].tries) % 3;
+    int n = 0;
+    uint32_t last = 0;
+    for (const char *t = m; *t && n < 14; ) {
+        while (*t == ' ') t++;
+        uint32_t d = 0;
+        bool button = false;
+        for (; *t && *t != ' '; t++)
+            switch (*t) {
+            case 'F': d |= fwd; break;
+            case 'B': d |= back; break;
+            case 'D': d |= 1u << BTN_DOWN; break;
+            case 'U': d |= 1u << BTN_UP; break;
+            case 'P': d = last | 1u << (BTN_HQ + want); button = true; break;     // with the last direction still held
+            case 'K': d = last | 1u << (BTN_LQ + want); button = true; break;
+            default: break;                     // N: neutral
+            }
+        seq[n++] = d;
+        seq[n++] = d;                           // each step held two frames
+        last = d;
+        if (button) break;
+    }
+    return n;
+}
+
+static void easy_breaker(uint32_t held[2])
+{
+    const uint32_t attacks = (1u << BTN_START) - 1 - (0xfu << BTN_UP);
+    for (int p = 0; p < 2; p++) {
+        uint32_t raw = held[p], pressed = raw & ~brk[p].prev & attacks;
+        brk[p].prev = raw;
+        bool human = game.in_game && ram2[game.in_game + (uint32_t)p * game.player_step] == 1;
+        bool combo = human && game.fighter_combo && ram2[game.fighter_combo + (uint32_t)(1 - p) * HEALTH_STEP] >= 1;
+        if (!combo) { brk[p].len = brk[p].tries = 0; continue; }
+        if (brk[p].pos >= brk[p].len && pressed) {
+            brk[p].len = breaker_moves(p, brk[p].seq);
+            brk[p].pos = 0;
+            if (brk[p].len) brk[p].tries++;
+        }
+        if (brk[p].pos < brk[p].len)
+            held[p] = (held[p] & ~((0xfu << BTN_UP) | attacks)) | brk[p].seq[brk[p].pos++];
+    }
+}
+
 void training_inputs(uint32_t held[2])
 {
     const uint32_t mask = (1u << BTN_START) - 1;     // directions and attacks only
+    if (cfg.easy_breaker) easy_breaker(held);
     if (mode == DUMMY_OFF && (cfg.training || training_forced)) {
         static uint32_t prev;
         static int idle;

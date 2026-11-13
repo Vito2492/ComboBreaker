@@ -52,7 +52,8 @@ again for the SNES menu:
   timer, blood, finishing moves, and the SNES controls table to remap each
   player's buttons. The arcade raises the CPU's level fight by fight; with
   FIXED DIFFICULTY: YES it stays at the chosen difficulty's first level all
-  game.
+  game. EASY COMBO BREAKER: ON makes any attack button break a combo, in
+  every mode.
 
 Also:
 
@@ -232,7 +233,8 @@ arcade, y Start otra vez para abrir el menú de la Super Nintendo:
   azar, reloj, sangre, finishing moves y la tabla de controles de la Super
   Nintendo para cambiar los botones de cada jugador. El arcade sube el nivel
   de la máquina pelea a pelea; con FIXED DIFFICULTY: YES se queda en el nivel
-  inicial de la dificultad elegida toda la partida.
+  inicial de la dificultad elegida toda la partida. Con EASY COMBO BREAKER: ON
+  cualquier botón de ataque rompe un combo, en todos los modos.
 
 Además:
 

@@ -89,6 +89,14 @@ typedef struct {
     uint32_t opponents, cursor;
     uint32_t fighter_x;         // 32 bits per fighter, health_step apart: position across the screen, 16.16
     uint32_t fighter_state;     // a byte per fighter, health_step apart: 0 standing still
+    // Combo breakers: per fighter (health_step apart) the hits of the combo
+    // it is landing, and the strength of the attack it is doing (1 quick,
+    // 2 medium, 4 fierce); per player (player_step apart) the fighter, by
+    // its place on the character screen; and each fighter's breaker move,
+    // by that place: directions relative to the way it faces (F, B, D, U,
+    // DF...), then P or K.
+    uint32_t fighter_combo, fighter_strength, fighter_slot;
+    const char *breakers[11];
 
     // Operator adjustments on the disk: adj_len bytes at adj_data, the first
     // set once they were edited, with the game's checksum of them at adj_sum.

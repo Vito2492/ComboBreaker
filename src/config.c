@@ -143,6 +143,7 @@ static void build_table(void)
     {
         add("game", "home_menu", T_BOOL, &cfg.home_menu, "yes", "console-style menu on Start: Arcade, VS, Tournament, Practice, Options", 0);
         add("game", "home_random_select", T_BOOL, &cfg.home_random, "no", "console menu Options: fighters are drawn at random", 0);
+        add("game", "easy_combo_breaker", T_BOOL, &cfg.easy_breaker, "no", "any attack button breaks a combo (the program does the fighter's breaker move, at the strength that breaks the hit), in every mode", 0);
         add("game", "home_fixed_difficulty", T_BOOL, &cfg.home_fixed, "no", "console menu Options: the CPU keeps the first fight's level all game instead of getting harder", 0);
         add("game", "home_timer", T_BOOL, &cfg.home_timer, "yes", "console menu Options: the fight clock runs", 0);
         add_str("game", "home_controls_p1", cfg.home_pad[0], "LYXRBA", "console menu Options: player 1's SNES button for weak/medium/fierce punch, weak/medium/fierce kick");

@@ -56,6 +56,7 @@ typedef struct {
     bool home_menu;            // console-style menu (Arcade, VS, Practice, Options) on Start
     bool home_random, home_timer;   // its Options: random select, the fight clock
     bool home_fixed;           // and FIXED DIFFICULTY: the CPU stays at its first fight's level
+    bool easy_breaker;         // and EASY COMBO BREAKER: any attack button breaks a combo, in every mode
     char home_pad[2][8];       // its Options > CONTROLS: the SNES button of each move, e.g. "LYXRBA"
     // the board's DIP switches
     bool free_play;

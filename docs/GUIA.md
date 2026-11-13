@@ -125,7 +125,11 @@ Enter elige y Retroceso vuelve.
   personaje al azar, reloj, sangre, finishing moves, y la tabla de controles
   para cambiar los botones de cada jugador. En el arcade la máquina se pone
   más difícil pelea a pelea; con **FIXED DIFFICULTY: YES** se queda en el
-  nivel inicial de la dificultad elegida toda la partida.
+  nivel inicial de la dificultad elegida toda la partida. Con **EASY COMBO
+  BREAKER: ON**, cualquier botón de ataque rompe el combo que te están
+  haciendo, en todos los modos: el programa hace el movimiento de breaker de
+  tu personaje con la fuerza que le gana al golpe que viene (si no entra,
+  aprieta otra vez y prueba la fuerza siguiente).
 
 ### Pausa
 
