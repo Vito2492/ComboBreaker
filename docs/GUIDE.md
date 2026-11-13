@@ -109,9 +109,10 @@ and Backspace.
   pause menu, **DUMMY** chooses what the other fighter does:
   - STAND, CROUCH, JUMP: just that.
   - BLOCK, LOW BLOCK: blocks standing or crouching whenever you attack.
-  - CPU: the game's own CPU fighter, which moves, attacks and does combos at
-    the difficulty's level. Changing to or from CPU takes you back to the
-    character screen.
+  - CPU: the game's own CPU fighter, which moves, attacks and does combos.
+    **CPU LEVEL**, just below in the pause menu, sets how good it is (one to
+    five stars, separate from the arcade's difficulty). Changing to or from
+    CPU takes you back to the character screen.
 
   The same setting is in F1 > Practice, beside the recorded dummy.
 - **Options:** difficulty (one to five stars), fixed difficulty, random

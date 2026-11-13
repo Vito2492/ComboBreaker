@@ -46,7 +46,7 @@ again for the SNES menu:
   No health bars or clock, as on the SNES. The pause menu's DUMMY sets what
   the other fighter does: stand, crouch, jump, block (standing or low,
   whenever you attack), or CPU: the game's own CPU fighter, attacking and
-  doing combos at the difficulty's level. The same setting is in F1 >
+  doing combos, at its own CPU LEVEL (one to five stars). The same setting is in F1 >
   Practice, beside the recorded dummy.
 - **Options**: difficulty (five stars), fixed difficulty, random select,
   timer, blood, finishing moves, and the SNES controls table to remap each
@@ -226,7 +226,7 @@ arcade, y Start otra vez para abrir el menú de la Super Nintendo:
   vida. Sin barras de vida ni reloj, como en la Super Nintendo. En la pausa,
   DUMMY elige qué hace el rival: quedarse parado, agachado, saltar, cubrirse
   (parado o agachado, cada vez que atacas) o CPU: el luchador de la máquina,
-  que ataca y hace combos al nivel de la dificultad. La misma opción está en
+  que ataca y hace combos, con su propio CPU LEVEL (de una a cinco estrellas). La misma opción está en
   F1 > Practice, junto al rival grabado.
 - **Options:** dificultad (cinco estrellas), dificultad fija, personaje al
   azar, reloj, sangre, finishing moves y la tabla de controles de la Super

@@ -124,6 +124,7 @@ static void build_table(void)
     add("system", "rewind_mb", T_INT, &cfg.rewind_mb, "256", "memory for it; about 85 KB per frame (256 MB = ~50 s)", 0);
     add("system", "input_display", T_BOOL, &cfg.input_display, "no", "show both players' recent inputs (numpad notation)", 0);
     add("system", "training_dummy", T_ENUM, &cfg.dummy, "stand", "training's player 2: stand, crouch, jump, block, low_block, or cpu (the game's CPU, in the console menu's Practice)", dummy_cfg_names);
+    add("game", "home_practice_cpu_level", T_INT, &cfg.practice_level, "3", "console menu Practice against the CPU: its level, 1 to 5 stars", 0);
     add("system", "training", T_BOOL, &cfg.training, "no",
         "training mode: health refills after each combo, the clock stops (start a 2-player game for a dummy)", 0);
     static char version_help[160] = "game version: ";

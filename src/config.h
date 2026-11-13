@@ -51,6 +51,7 @@ typedef struct {
     bool perf_overlay;
     bool training;             // health refill + timer freeze
     int dummy;                 // what player 2 does in training (DUMMY_* in training.h)
+    int practice_level;        // the CPU's level in the console menu's Practice, 1-5 stars (10-50 of the game's 50)
     int touch_controls;        // TOUCH_AUTO / ON / OFF (Android)
     bool home_menu;            // console-style menu (Arcade, VS, Practice, Options) on Start
     bool home_random, home_timer;   // its Options: random select, the fight clock

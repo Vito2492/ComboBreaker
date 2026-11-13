@@ -249,7 +249,7 @@ enum { PAGE_CLOSED, PAGE_MAIN, PAGE_OPTIONS, PAGE_PAUSE, PAGE_ROSTER, PAGE_NEXT 
 enum { MAIN_ARCADE, MAIN_VS, MAIN_TOURNAMENT, MAIN_PRACTICE, MAIN_OPTIONS, MAIN_COUNT };
 enum { OPT_DIFFICULTY, OPT_FIXED, OPT_RANDOM, OPT_TIMER, OPT_BLOOD, OPT_FINISH,
        OPT_WP, OPT_MP, OPT_FP, OPT_WK, OPT_MK, OPT_FK, OPT_RESET, OPT_EXIT, OPT_COUNT };
-enum { PAUSE_CONTINUE, PAUSE_DUMMY, PAUSE_MENU, PAUSE_COUNT };   // DUMMY: Practice only
+enum { PAUSE_CONTINUE, PAUSE_DUMMY, PAUSE_LEVEL, PAUSE_MENU, PAUSE_COUNT };   // DUMMY: Practice only, LEVEL: against the CPU
 
 // as on the SNES title screen
 static const char *const main_items[MAIN_COUNT] = { "1 PLAYER GAME", "2 PLAYER GAME", "TOURNAMENT GAME", "PRACTICE GAME", "OPTIONS" };
@@ -734,6 +734,16 @@ static int page_items(void)
     return h.page == PAGE_MAIN ? MAIN_COUNT : h.page == PAGE_OPTIONS ? OPT_COUNT : h.page == PAGE_PAUSE ? PAUSE_COUNT : 1;
 }
 
+// Practice against the CPU: its level in stars, 10 to 50 of the game's 50
+static int practice_stars(void) { return cfg.practice_level < 1 ? 1 : cfg.practice_level > 5 ? 5 : cfg.practice_level; }
+
+static bool pause_shown(int item)
+{
+    if (item == PAUSE_DUMMY) return h.mode == MODE_PRACTICE;
+    if (item == PAUSE_LEVEL) return h.mode == MODE_PRACTICE && cfg.dummy == DUMMY_CPU;
+    return true;
+}
+
 static void menu_frame(const uint32_t held[2])
 {
     int ud, lr;
@@ -751,7 +761,7 @@ static void menu_frame(const uint32_t held[2])
     }
     int n = page_items();
     if (ud) h.sel = (h.sel + ud + n) % n;
-    if (ud && h.page == PAGE_PAUSE && h.sel == PAUSE_DUMMY && h.mode != MODE_PRACTICE) h.sel = (h.sel + ud + n) % n;
+    if (ud && h.page == PAGE_PAUSE) while (!pause_shown(h.sel)) h.sel = (h.sel + ud + n) % n;
     if (h.page == PAGE_MAIN) {
         if (ok) choose(h.sel);
     } else if (h.page == PAGE_OPTIONS) {
@@ -769,7 +779,11 @@ static void menu_frame(const uint32_t held[2])
         else if (ok) change_option(0);
         else if (back) { h.sel = OPT_EXIT; change_option(0); }
     } else if (h.page == PAGE_PAUSE) {
-        if (h.sel == PAUSE_DUMMY && (lr || ok)) {
+        if (h.sel == PAUSE_LEVEL && (lr || ok)) {
+            int l = practice_stars() + (lr ? lr : 1);
+            cfg.practice_level = l < 1 ? 5 : l > 5 ? 1 : l;
+            frontend_settings_changed();
+        } else if (h.sel == PAUSE_DUMMY && (lr || ok)) {
             int d = lr ? lr : 1;
             cfg.dummy = ((cfg.dummy + d) % DUMMY_COUNT + DUMMY_COUNT) % DUMMY_COUNT;
             frontend_settings_changed();
@@ -962,7 +976,7 @@ void home_inputs(uint32_t held[2])
     if (h.press > 0) { held[h.press_player] |= 1u << BTN_START; h.press--; }
 
     if (h.mode == MODE_PRACTICE && h.cpu && !h.starting) cpu_pick(held, pressed);
-    if (h.mode == MODE_PRACTICE && h.cpu) hold_level();
+    if (h.mode == MODE_PRACTICE && h.cpu && game.cpu_level) poke(game.cpu_level, (uint8_t)(practice_stars() * 10));
 
     // Practice: player 1 picks both fighters, then the dummy stands still.
     if (h.mode == MODE_PRACTICE && in_game(1)) {
@@ -1159,16 +1173,21 @@ static void draw_pause(uint32_t *ov)
     veil(ov, 150);
     char dummy[32];
     snprintf(dummy, sizeof dummy, "DUMMY: %s", dummy_names[cfg.dummy % DUMMY_COUNT]);
-    const char *const items[PAUSE_COUNT] = { "CONTINUE", dummy, "MAIN MENU" };
+    const char *const items[PAUSE_COUNT] = { "CONTINUE", dummy, "CPU LEVEL: ", "MAIN MENU" };
     text_c(ov, F_BIG, 90, "PAUSE", C_ITEM, 255);
-    int y = 120;
+    int y = 120, a = fade_in();
     for (int i = 0; i < PAUSE_COUNT; i++) {
-        if (i == PAUSE_DUMMY && h.mode != MODE_PRACTICE) continue;
-        text_c(ov, F_BODY, y, items[i], i == h.sel ? C_SEL : C_ITEM, fade_in());
+        if (!pause_shown(i)) continue;
+        uint32_t c = i == h.sel ? C_SEL : C_ITEM;
+        if (i == PAUSE_LEVEL) {         // the words, then five stars
+            int w = text_width(F_BODY, items[i]) + 45, x = (320 - w) / 2;
+            text(ov, F_BODY, x, y, items[i], c, a);
+            stars(ov, x + w - 45, y + 1, practice_stars(), a);
+        } else text_c(ov, F_BODY, y, items[i], c, a);
         y += 16;
     }
-    if (h.mode == MODE_PRACTICE && h.sel == PAUSE_DUMMY)
-        text_c(ov, F_SMALL, 222, (cfg.dummy == DUMMY_CPU) != (h.pause_dummy == DUMMY_CPU) ? "FIGHTERS ARE PICKED AGAIN" : "LEFT/RIGHT: CHANGE", C_DIM, 255);
+    if (h.mode == MODE_PRACTICE && (h.sel == PAUSE_DUMMY || h.sel == PAUSE_LEVEL))
+        text_c(ov, F_SMALL, 222, h.sel == PAUSE_DUMMY && (cfg.dummy == DUMMY_CPU) != (h.pause_dummy == DUMMY_CPU) ? "FIGHTERS ARE PICKED AGAIN" : "LEFT/RIGHT: CHANGE", C_DIM, 255);
 }
 
 // Practice as on the SNES: no health bars or clock, just its name. The

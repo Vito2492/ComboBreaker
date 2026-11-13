@@ -115,9 +115,10 @@ Enter elige y Retroceso vuelve.
   pausa, **DUMMY** elige qué hace el rival:
   - STAND, CROUCH, JUMP: quedarse parado, agachado o saltar.
   - BLOCK, LOW BLOCK: se cubre parado o agachado cada vez que atacas.
-  - CPU: el luchador de la máquina, que se mueve, ataca y hace combos al
-    nivel de la dificultad. Al pasar a CPU o salir de CPU vuelves a la
-    pantalla de personajes.
+  - CPU: el luchador de la máquina, que se mueve, ataca y hace combos.
+    **CPU LEVEL**, justo debajo en la pausa, elige qué tan bueno es (de una a
+    cinco estrellas, aparte de la dificultad del arcade). Al pasar a CPU o
+    salir de CPU vuelves a la pantalla de personajes.
 
   La misma opción está en F1 > Practice, junto al rival grabado.
 - **Options:** dificultad (de una a cinco estrellas), dificultad fija,
