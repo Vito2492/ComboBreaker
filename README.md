@@ -45,14 +45,16 @@ again for the SNES menu:
 - **Practice Game**: player 1 picks both fighters and nobody loses health.
   No health bars or clock, as on the SNES. The pause menu's DUMMY sets what
   the other fighter does: stand, crouch, jump, block (standing or low,
-  whenever you attack), or CPU: the game's own CPU fighter, attacking and
-  doing combos at the difficulty's level. The same setting is in F1 >
+  whenever you attack), COMBO (walks up and does a combo again and again, to
+  practise breakers), or CPU: the game's own CPU fighter, attacking and
+  doing combos, at its own CPU LEVEL (one to five stars). The same setting is in F1 >
   Practice, beside the recorded dummy.
 - **Options**: difficulty (five stars), fixed difficulty, random select,
   timer, blood, finishing moves, and the SNES controls table to remap each
   player's buttons. The arcade raises the CPU's level fight by fight; with
   FIXED DIFFICULTY: YES it stays at the chosen difficulty's first level all
-  game.
+  game. EASY COMBO BREAKER: ON makes any attack button break a combo, in
+  every mode.
 
 Also:
 
@@ -225,14 +227,16 @@ arcade, y Start otra vez para abrir el menú de la Super Nintendo:
 - **Practice Game:** el jugador 1 elige los dos personajes y nadie pierde
   vida. Sin barras de vida ni reloj, como en la Super Nintendo. En la pausa,
   DUMMY elige qué hace el rival: quedarse parado, agachado, saltar, cubrirse
-  (parado o agachado, cada vez que atacas) o CPU: el luchador de la máquina,
-  que ataca y hace combos al nivel de la dificultad. La misma opción está en
+  (parado o agachado, cada vez que atacas), COMBO (se acerca y hace un combo una
+  y otra vez, para practicar breakers) o CPU: el luchador de la máquina,
+  que ataca y hace combos, con su propio CPU LEVEL (de una a cinco estrellas). La misma opción está en
   F1 > Practice, junto al rival grabado.
 - **Options:** dificultad (cinco estrellas), dificultad fija, personaje al
   azar, reloj, sangre, finishing moves y la tabla de controles de la Super
   Nintendo para cambiar los botones de cada jugador. El arcade sube el nivel
   de la máquina pelea a pelea; con FIXED DIFFICULTY: YES se queda en el nivel
-  inicial de la dificultad elegida toda la partida.
+  inicial de la dificultad elegida toda la partida. Con EASY COMBO BREAKER: ON
+  cualquier botón de ataque rompe un combo, en todos los modos.
 
 Además:
 

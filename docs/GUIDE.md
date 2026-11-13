@@ -109,16 +109,22 @@ and Backspace.
   pause menu, **DUMMY** chooses what the other fighter does:
   - STAND, CROUCH, JUMP: just that.
   - BLOCK, LOW BLOCK: blocks standing or crouching whenever you attack.
-  - CPU: the game's own CPU fighter, which moves, attacks and does combos at
-    the difficulty's level. Changing to or from CPU takes you back to the
-    character screen.
+  - COMBO: walks up and does a combo of its own (three to five hits), rests,
+    and again: practice for combo breakers.
+  - CPU: the game's own CPU fighter, which moves, attacks and does combos.
+    **CPU LEVEL**, just below in the pause menu, sets how good it is (one to
+    five stars, separate from the arcade's difficulty). Changing to or from
+    CPU takes you back to the character screen.
 
   The same setting is in F1 > Practice, beside the recorded dummy.
 - **Options:** difficulty (one to five stars), fixed difficulty, random
   select, timer, blood, finishing moves, and the controls table to remap
   each player's buttons. The arcade game gets harder fight by fight; with
   **FIXED DIFFICULTY: YES** the CPU stays at the chosen difficulty's first
-  level for the whole game.
+  level for the whole game. With **EASY COMBO BREAKER: ON**, any attack
+  button breaks a combo you are taking, in every mode: the program does your
+  fighter's breaker move at the strength that breaks the hit coming in (if
+  it doesn't take, press again and it tries the next strength).
 
 ### Pause
 

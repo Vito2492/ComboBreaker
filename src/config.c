@@ -24,7 +24,7 @@ typedef struct {
 static const char *const family_names[] = { "auto", "xbox", "playstation", "switch", "positions", 0 };
 static const char *const scale_names[] = { "fit", "integer", "stretch", 0 };
 static const char *const pacing_names[] = { "auto", "audio", "vsync", 0 };
-static const char *const dummy_cfg_names[] = { "stand", "crouch", "jump", "block", "low_block", "cpu", 0 };
+static const char *const dummy_cfg_names[] = { "stand", "crouch", "jump", "block", "low_block", "combo", "cpu", 0 };
 static const char *const blood_names[] = { "none", "low", "medium", "high", 0 };
 static const char *const blood_colour_names[] = { "red", "white", 0 };
 #ifdef __ANDROID__
@@ -123,7 +123,8 @@ static void build_table(void)
     add("system", "rewind", T_BOOL, &cfg.rewind, "yes", "keep a rewind history (hold the rewind hotkey)", 0);
     add("system", "rewind_mb", T_INT, &cfg.rewind_mb, "256", "memory for it; about 85 KB per frame (256 MB = ~50 s)", 0);
     add("system", "input_display", T_BOOL, &cfg.input_display, "no", "show both players' recent inputs (numpad notation)", 0);
-    add("system", "training_dummy", T_ENUM, &cfg.dummy, "stand", "training's player 2: stand, crouch, jump, block, low_block, or cpu (the game's CPU, in the console menu's Practice)", dummy_cfg_names);
+    add("system", "training_dummy", T_ENUM, &cfg.dummy, "stand", "training's player 2: stand, crouch, jump, block, low_block, combo (walks up and does a combo, again and again), or cpu (the game's CPU, in the console menu's Practice)", dummy_cfg_names);
+    add("game", "home_practice_cpu_level", T_INT, &cfg.practice_level, "3", "console menu Practice against the CPU: its level, 1 to 5 stars", 0);
     add("system", "training", T_BOOL, &cfg.training, "no",
         "training mode: health refills after each combo, the clock stops (start a 2-player game for a dummy)", 0);
     static char version_help[160] = "game version: ";
@@ -142,6 +143,7 @@ static void build_table(void)
     {
         add("game", "home_menu", T_BOOL, &cfg.home_menu, "yes", "console-style menu on Start: Arcade, VS, Tournament, Practice, Options", 0);
         add("game", "home_random_select", T_BOOL, &cfg.home_random, "no", "console menu Options: fighters are drawn at random", 0);
+        add("game", "easy_combo_breaker", T_BOOL, &cfg.easy_breaker, "no", "any attack button breaks a combo (the program does the fighter's breaker move, at the strength that breaks the hit), in every mode", 0);
         add("game", "home_fixed_difficulty", T_BOOL, &cfg.home_fixed, "no", "console menu Options: the CPU keeps the first fight's level all game instead of getting harder", 0);
         add("game", "home_timer", T_BOOL, &cfg.home_timer, "yes", "console menu Options: the fight clock runs", 0);
         add_str("game", "home_controls_p1", cfg.home_pad[0], "LYXRBA", "console menu Options: player 1's SNES button for weak/medium/fierce punch, weak/medium/fierce kick");

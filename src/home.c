@@ -249,9 +249,9 @@ static void stage_frame(uint32_t held[2])
 enum { MODE_NONE, MODE_ARCADE, MODE_VS, MODE_TOURNAMENT, MODE_PRACTICE };
 enum { PAGE_CLOSED, PAGE_MAIN, PAGE_OPTIONS, PAGE_PAUSE, PAGE_ROSTER, PAGE_NEXT };
 enum { MAIN_ARCADE, MAIN_VS, MAIN_TOURNAMENT, MAIN_PRACTICE, MAIN_OPTIONS, MAIN_COUNT };
-enum { OPT_DIFFICULTY, OPT_FIXED, OPT_RANDOM, OPT_TIMER, OPT_BLOOD, OPT_FINISH,
+enum { OPT_DIFFICULTY, OPT_FIXED, OPT_RANDOM, OPT_TIMER, OPT_BLOOD, OPT_FINISH, OPT_BREAKER,
        OPT_WP, OPT_MP, OPT_FP, OPT_WK, OPT_MK, OPT_FK, OPT_RESET, OPT_EXIT, OPT_COUNT };
-enum { PAUSE_CONTINUE, PAUSE_DUMMY, PAUSE_MENU, PAUSE_COUNT };   // DUMMY: Practice only
+enum { PAUSE_CONTINUE, PAUSE_DUMMY, PAUSE_LEVEL, PAUSE_MENU, PAUSE_COUNT };   // DUMMY: Practice only, LEVEL: against the CPU
 
 // as on the SNES title screen
 static const char *const main_items[MAIN_COUNT] = { "1 PLAYER GAME", "2 PLAYER GAME", "TOURNAMENT GAME", "PRACTICE GAME", "OPTIONS" };
@@ -627,6 +627,7 @@ static void change_option(int dir)
         break;
     }
     case OPT_FIXED: cfg.home_fixed = !cfg.home_fixed; break;
+    case OPT_BREAKER: cfg.easy_breaker = !cfg.easy_breaker; break;
     case OPT_RANDOM: cfg.home_random = !cfg.home_random; break;
     case OPT_TIMER: cfg.home_timer = !cfg.home_timer; break;
     case OPT_BLOOD: cfg.blood = ((cfg.blood + d) % 4 + 4) % 4; h.switches_changed = true; break;
@@ -737,6 +738,16 @@ static int page_items(void)
     return h.page == PAGE_MAIN ? MAIN_COUNT : h.page == PAGE_OPTIONS ? OPT_COUNT : h.page == PAGE_PAUSE ? PAUSE_COUNT : 1;
 }
 
+// Practice against the CPU: its level in stars, 10 to 50 of the game's 50
+static int practice_stars(void) { return cfg.practice_level < 1 ? 1 : cfg.practice_level > 5 ? 5 : cfg.practice_level; }
+
+static bool pause_shown(int item)
+{
+    if (item == PAUSE_DUMMY) return h.mode == MODE_PRACTICE;
+    if (item == PAUSE_LEVEL) return h.mode == MODE_PRACTICE && cfg.dummy == DUMMY_CPU;
+    return true;
+}
+
 static void menu_frame(const uint32_t held[2])
 {
     int ud, lr;
@@ -754,7 +765,7 @@ static void menu_frame(const uint32_t held[2])
     }
     int n = page_items();
     if (ud) h.sel = (h.sel + ud + n) % n;
-    if (ud && h.page == PAGE_PAUSE && h.sel == PAUSE_DUMMY && h.mode != MODE_PRACTICE) h.sel = (h.sel + ud + n) % n;
+    if (ud && h.page == PAGE_PAUSE) while (!pause_shown(h.sel)) h.sel = (h.sel + ud + n) % n;
     if (h.page == PAGE_MAIN) {
         if (ok) choose(h.sel);
     } else if (h.page == PAGE_OPTIONS) {
@@ -772,7 +783,11 @@ static void menu_frame(const uint32_t held[2])
         else if (ok) change_option(0);
         else if (back) { h.sel = OPT_EXIT; change_option(0); }
     } else if (h.page == PAGE_PAUSE) {
-        if (h.sel == PAUSE_DUMMY && (lr || ok)) {
+        if (h.sel == PAUSE_LEVEL && (lr || ok)) {
+            int l = practice_stars() + (lr ? lr : 1);
+            cfg.practice_level = l < 1 ? 5 : l > 5 ? 1 : l;
+            frontend_settings_changed();
+        } else if (h.sel == PAUSE_DUMMY && (lr || ok)) {
             int d = lr ? lr : 1;
             cfg.dummy = ((cfg.dummy + d) % DUMMY_COUNT + DUMMY_COUNT) % DUMMY_COUNT;
             frontend_settings_changed();
@@ -973,7 +988,7 @@ void home_inputs(uint32_t held[2])
     if (h.press > 0) { held[h.press_player] |= 1u << BTN_START; h.press--; }
 
     if (h.mode == MODE_PRACTICE && h.cpu && !h.starting) cpu_pick(held, pressed);
-    if (h.mode == MODE_PRACTICE && h.cpu) hold_level();
+    if (h.mode == MODE_PRACTICE && h.cpu && game.cpu_level) poke(game.cpu_level, (uint8_t)(practice_stars() * 10));
 
     // Practice: player 1 picks both fighters, then the dummy stands still.
     if (h.mode == MODE_PRACTICE && in_game(1)) {
@@ -1162,8 +1177,8 @@ static void draw_options(uint32_t *ov)
     text_c(ov, F_BIG, 8, "OPTIONS", C_ITEM, a);
     int dl = adjust_difficulty();
     char line[48];
-    for (int i = OPT_DIFFICULTY; i <= OPT_FINISH; i++) {
-        int y = 32 + i * 12;
+    for (int i = OPT_DIFFICULTY; i <= OPT_BREAKER; i++) {
+        int y = 30 + i * 11;
         uint32_t c = i == h.sel ? C_SEL : C_ITEM;
         switch (i) {
         case OPT_DIFFICULTY:
@@ -1175,18 +1190,19 @@ static void draw_options(uint32_t *ov)
         case OPT_RANDOM: snprintf(line, sizeof line, "RANDOM SELECT: %s", cfg.home_random ? "ON" : "OFF"); break;
         case OPT_TIMER: snprintf(line, sizeof line, "TIMER: %s", cfg.home_timer ? "ON" : "OFF"); break;
         case OPT_BLOOD: snprintf(line, sizeof line, "BLOOD: %s", blood_names[cfg.blood & 3]); break;
-        default: snprintf(line, sizeof line, "FINISHING MOVES: %s", cfg.finishing_moves ? "ON" : "OFF"); break;
+        case OPT_FINISH: snprintf(line, sizeof line, "FINISHING MOVES: %s", cfg.finishing_moves ? "ON" : "OFF"); break;
+        default: snprintf(line, sizeof line, "EASY COMBO BREAKER: %s", cfg.easy_breaker ? "ON" : "OFF"); break;
         }
         text(ov, F_BODY, 20, y, line, c, a);
     }
     // the controls table: the move, then each player's SNES button
     static const char *const moves[6] = { "WEAK PUNCH:", "MEDIUM PUNCH:", "FIERCE PUNCH:", "WEAK KICK:", "MEDIUM KICK:", "FIERCE KICK:" };
-    text(ov, F_BODY, 20, 108, "CONTROLS:", C_ITEM, a);
-    text(ov, F_BODY, 222, 108, "P1", C_ITEM, a);
-    text(ov, F_BODY, 272, 108, "P2", C_ITEM, a);
+    text(ov, F_BODY, 20, 120, "CONTROLS:", C_ITEM, a);
+    text(ov, F_BODY, 222, 120, "P1", C_ITEM, a);
+    text(ov, F_BODY, 272, 120, "P2", C_ITEM, a);
     bool blink = (h.anim / 12) % 2 == 0;
     for (int m = 0; m < 6; m++) {
-        int y = 122 + m * 12, row = OPT_WP + m;
+        int y = 132 + m * 11, row = OPT_WP + m;
         text(ov, F_BODY, 206 - text_width(F_BODY, moves[m]), y, moves[m], row == h.sel ? C_SEL : C_HELP, a);
         for (int p = 0; p < 2; p++) {
             char l[2] = { cfg.home_pad[p][m] ? cfg.home_pad[p][m] : pad_letters[m], 0 };
@@ -1196,8 +1212,8 @@ static void draw_options(uint32_t *ov)
         }
     }
     for (int p = 0; p < 2; p++)
-        text(ov, F_SMALL, 207 + p * 50, 196, "RESET", h.sel == OPT_RESET && p == h.col ? C_SEL : C_ITEM, a);
-    text(ov, F_BODY, 20, 196, "EXIT", h.sel == OPT_EXIT ? C_SEL : C_ITEM, a);
+        text(ov, F_SMALL, 207 + p * 50, 201, "RESET", h.sel == OPT_RESET && p == h.col ? C_SEL : C_ITEM, a);
+    text(ov, F_BODY, 20, 200, "EXIT", h.sel == OPT_EXIT ? C_SEL : C_ITEM, a);
     const char *help = h.sel >= OPT_WP && h.sel <= OPT_FK ? "PRESS A BUTTON   LEFT/RIGHT: P1/P2"
                      : h.switches_changed ? "RESTARTS ON EXIT TO APPLY" : "LEFT/RIGHT: CHANGE";
     text_c(ov, F_SMALL, 222, help, C_DIM, a);
@@ -1260,16 +1276,21 @@ static void draw_pause(uint32_t *ov)
     veil(ov, 150);
     char dummy[32];
     snprintf(dummy, sizeof dummy, "DUMMY: %s", dummy_names[cfg.dummy % DUMMY_COUNT]);
-    const char *const items[PAUSE_COUNT] = { "CONTINUE", dummy, "MAIN MENU" };
+    const char *const items[PAUSE_COUNT] = { "CONTINUE", dummy, "CPU LEVEL: ", "MAIN MENU" };
     text_c(ov, F_BIG, 90, "PAUSE", C_ITEM, 255);
-    int y = 120;
+    int y = 120, a = fade_in();
     for (int i = 0; i < PAUSE_COUNT; i++) {
-        if (i == PAUSE_DUMMY && h.mode != MODE_PRACTICE) continue;
-        text_c(ov, F_BODY, y, items[i], i == h.sel ? C_SEL : C_ITEM, fade_in());
+        if (!pause_shown(i)) continue;
+        uint32_t c = i == h.sel ? C_SEL : C_ITEM;
+        if (i == PAUSE_LEVEL) {         // the words, then five stars
+            int w = text_width(F_BODY, items[i]) + 45, x = (320 - w) / 2;
+            text(ov, F_BODY, x, y, items[i], c, a);
+            stars(ov, x + w - 45, y + 1, practice_stars(), a);
+        } else text_c(ov, F_BODY, y, items[i], c, a);
         y += 16;
     }
-    if (h.mode == MODE_PRACTICE && h.sel == PAUSE_DUMMY)
-        text_c(ov, F_SMALL, 222, (cfg.dummy == DUMMY_CPU) != (h.pause_dummy == DUMMY_CPU) ? "FIGHTERS ARE PICKED AGAIN" : "LEFT/RIGHT: CHANGE", C_DIM, 255);
+    if (h.mode == MODE_PRACTICE && (h.sel == PAUSE_DUMMY || h.sel == PAUSE_LEVEL))
+        text_c(ov, F_SMALL, 222, h.sel == PAUSE_DUMMY && (cfg.dummy == DUMMY_CPU) != (h.pause_dummy == DUMMY_CPU) ? "FIGHTERS ARE PICKED AGAIN" : "LEFT/RIGHT: CHANGE", C_DIM, 255);
 }
 
 // Practice as on the SNES: no health bars or clock, just its name. The

@@ -54,6 +54,26 @@ const game_t game_ki1 = {
     // found by setting them in RAM and watching who comes out
     .opponents = 0x8f428, .cursor = 0x8f314,
     .fighter_x = 0x8bc68, .fighter_state = 0x8bc1c,     // by holding directions in a fight
+    // found by breaking combos in scripted fights: a quick breaks a medium,
+    // a medium a fierce, a fierce a quick
+    .fighter_combo = 0x8bc8d, .fighter_strength = 0x8bc62, .fighter_slot = 0x8f33b,
+    .breakers = {
+        "B DB D DF F K",    // Combo
+        "F D DF P",         // Jago
+        "F DF D DB B P",    // Thunder
+        "B DB D DF F P",    // Glacius
+        "B DB D DF F K",    // Orchid
+        "F D DF K",         // Cinder
+        "B DB D DF F K",    // Sabrewulf
+        "B DB D DF F K",    // Riptor
+        "F N F P",          // Spinal
+        "F D DF P",         // Fulgore
+        0,                  // Eyedol
+    },
+    .combos = {             // found the same way, each tried on T. J. Combo
+        "59 C LQ LM", "51 Q HF HM", "57 C HQ HM", "56 C HQ HM", "53 C LM HM",
+        "58 C HM LM", "64 C HM HM", "98 C HM HQ", "76 Q HQ HM", "63 C LQ HM", 0,
+    },
     .music_set = 0x86240, .music = 0x86241,     // read at 880007a0, table at 8800e4d4
 
     // found by changing the difficulty in the game's operator menu (both versions)

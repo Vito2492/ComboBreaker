@@ -935,6 +935,14 @@ int main(int argc, char **argv)
             if (trace_from && f == trace_from) cpu_trace = true;
             apply_script(f);
             if (getenv("KI2_TRAINING")) { cfg.training = true; training_apply(true); }   // testing
+            if (getenv("KI2_EASY_BREAKER") || getenv("KI2_DUMMY")) {   // testing: the easy combo breaker, a training dummy (DUMMY_*), on the script's inputs
+                cfg.easy_breaker = getenv("KI2_EASY_BREAKER") != NULL;
+                if (getenv("KI2_DUMMY")) { cfg.training = true; cfg.dummy = atoi(getenv("KI2_DUMMY")); }
+                uint32_t held[2] = { ~hw.p1 & 0xfffu, ~hw.p2 & 0xfffu };
+                training_inputs(held);
+                hw.p1 = (hw.p1 | 0xfffu) & ~held[0];
+                hw.p2 = (hw.p2 | 0xfffu) & ~held[1];
+            }
             if (getenv("KI2_POKE")) {           // testing: F:OFFSET:VALUE,... sets a RAM byte every frame from F on
                 for (const char *q = getenv("KI2_POKE"); *q; q = strchr(q, ',') ? strchr(q, ',') + 1 : q + strlen(q)) {
                     unsigned pf, off, v;
@@ -944,6 +952,14 @@ int main(int argc, char **argv)
             uint64_t t0 = SDL_GetPerformanceCounter();
             run_frame();
             state_checkpoint();
+            if (getenv("KI2_WATCH")) {          // testing: OFFSET,... prints those RAM bytes (hex) after every frame
+                fprintf(stderr, "watch %d", f);
+                for (const char *q = getenv("KI2_WATCH"); *q; q = strchr(q, ',') ? strchr(q, ',') + 1 : q + strlen(q)) {
+                    unsigned off = (unsigned)strtoul(q, NULL, 16);
+                    if (off < RAM2_SIZE) fprintf(stderr, " %u", ram2[off]);
+                }
+                fprintf(stderr, "\n");
+            }
             if (runahead) {
                 for (int k = 0; k < runahead; k++) run_frame();
                 state_rollback();

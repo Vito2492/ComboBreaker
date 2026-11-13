@@ -115,16 +115,23 @@ Enter elige y Retroceso vuelve.
   pausa, **DUMMY** elige qué hace el rival:
   - STAND, CROUCH, JUMP: quedarse parado, agachado o saltar.
   - BLOCK, LOW BLOCK: se cubre parado o agachado cada vez que atacas.
-  - CPU: el luchador de la máquina, que se mueve, ataca y hace combos al
-    nivel de la dificultad. Al pasar a CPU o salir de CPU vuelves a la
-    pantalla de personajes.
+  - COMBO: se acerca y te hace un combo propio (de tres a cinco golpes),
+    descansa y vuelve a empezar: para practicar los combo breakers.
+  - CPU: el luchador de la máquina, que se mueve, ataca y hace combos.
+    **CPU LEVEL**, justo debajo en la pausa, elige qué tan bueno es (de una a
+    cinco estrellas, aparte de la dificultad del arcade). Al pasar a CPU o
+    salir de CPU vuelves a la pantalla de personajes.
 
   La misma opción está en F1 > Practice, junto al rival grabado.
 - **Options:** dificultad (de una a cinco estrellas), dificultad fija,
   personaje al azar, reloj, sangre, finishing moves, y la tabla de controles
   para cambiar los botones de cada jugador. En el arcade la máquina se pone
   más difícil pelea a pelea; con **FIXED DIFFICULTY: YES** se queda en el
-  nivel inicial de la dificultad elegida toda la partida.
+  nivel inicial de la dificultad elegida toda la partida. Con **EASY COMBO
+  BREAKER: ON**, cualquier botón de ataque rompe el combo que te están
+  haciendo, en todos los modos: el programa hace el movimiento de breaker de
+  tu personaje con la fuerza que le gana al golpe que viene (si no entra,
+  aprieta otra vez y prueba la fuerza siguiente).
 
 ### Pausa
 
