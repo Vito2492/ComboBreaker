@@ -109,6 +109,8 @@ and Backspace.
   pause menu, **DUMMY** chooses what the other fighter does:
   - STAND, CROUCH, JUMP: just that.
   - BLOCK, LOW BLOCK: blocks standing or crouching whenever you attack.
+  - COMBO: walks up and does a combo of its own (three to five hits), rests,
+    and again: practice for combo breakers.
   - CPU: the game's own CPU fighter, which moves, attacks and does combos.
     **CPU LEVEL**, just below in the pause menu, sets how good it is (one to
     five stars, separate from the arcade's difficulty). Changing to or from

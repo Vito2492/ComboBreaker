@@ -24,7 +24,7 @@ typedef struct {
 static const char *const family_names[] = { "auto", "xbox", "playstation", "switch", "positions", 0 };
 static const char *const scale_names[] = { "fit", "integer", "stretch", 0 };
 static const char *const pacing_names[] = { "auto", "audio", "vsync", 0 };
-static const char *const dummy_cfg_names[] = { "stand", "crouch", "jump", "block", "low_block", "cpu", 0 };
+static const char *const dummy_cfg_names[] = { "stand", "crouch", "jump", "block", "low_block", "combo", "cpu", 0 };
 static const char *const blood_names[] = { "none", "low", "medium", "high", 0 };
 static const char *const blood_colour_names[] = { "red", "white", 0 };
 #ifdef __ANDROID__
@@ -123,7 +123,7 @@ static void build_table(void)
     add("system", "rewind", T_BOOL, &cfg.rewind, "yes", "keep a rewind history (hold the rewind hotkey)", 0);
     add("system", "rewind_mb", T_INT, &cfg.rewind_mb, "256", "memory for it; about 85 KB per frame (256 MB = ~50 s)", 0);
     add("system", "input_display", T_BOOL, &cfg.input_display, "no", "show both players' recent inputs (numpad notation)", 0);
-    add("system", "training_dummy", T_ENUM, &cfg.dummy, "stand", "training's player 2: stand, crouch, jump, block, low_block, or cpu (the game's CPU, in the console menu's Practice)", dummy_cfg_names);
+    add("system", "training_dummy", T_ENUM, &cfg.dummy, "stand", "training's player 2: stand, crouch, jump, block, low_block, combo (walks up and does a combo, again and again), or cpu (the game's CPU, in the console menu's Practice)", dummy_cfg_names);
     add("game", "home_practice_cpu_level", T_INT, &cfg.practice_level, "3", "console menu Practice against the CPU: its level, 1 to 5 stars", 0);
     add("system", "training", T_BOOL, &cfg.training, "no",
         "training mode: health refills after each combo, the clock stops (start a 2-player game for a dummy)", 0);

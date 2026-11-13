@@ -92,7 +92,7 @@ void training_play_toggle(void)
     osd_message("Dummy playing (F9 stops)");
 }
 
-const char *const dummy_names[DUMMY_COUNT] = { "STAND", "CROUCH", "JUMP", "BLOCK", "LOW BLOCK", "CPU" };
+const char *const dummy_names[DUMMY_COUNT] = { "STAND", "CROUCH", "JUMP", "BLOCK", "LOW BLOCK", "COMBO", "CPU" };
 
 // The dummy's stance, held as player 2's directions while a fight is on (not
 // on the character screen, where they would move its cursor). Blocking is
@@ -183,6 +183,63 @@ static void easy_breaker(uint32_t held[2])
     }
 }
 
+// The COMBO dummy: walks up to its combo's distance, does the combo, waits,
+// and again. Player 2's inputs, frame by frame.
+static struct { int phase, t, last, stuck; } cd;
+
+static uint32_t btn_bit(const char *b)
+{
+    static const char *const names[6] = { "HQ", "HM", "HF", "LQ", "LM", "LF" };
+    for (int i = 0; i < 6; i++) if (!strncmp(b, names[i], 2)) return 1u << (BTN_HQ + i);
+    return 0;
+}
+
+static uint32_t combo_dummy(void)
+{
+    if (!game.fight_scene || !ram2[game.fight_scene] || game_health(1) < 0 || !game.fighter_x || !game.fighter_slot) { cd.phase = 0; cd.stuck = 0; cd.last = 1000; return 0; }
+    unsigned slot = ram2[game.fighter_slot + game.player_step];
+    const char *c = slot < 11 ? game.combos[slot] : NULL;
+    if (!c) return 0;
+    int dist = atoi(c);
+    char kind = c[3];
+    uint32_t open = btn_bit(c + 5), follow = btn_bit(c + 8);
+    int32_t x1, x2;
+    memcpy(&x1, &ram2[game.fighter_x], 4);
+    memcpy(&x2, &ram2[game.fighter_x + HEALTH_STEP], 4);
+    uint32_t fwd = 1u << (x1 > x2 ? BTN_RIGHT : BTN_LEFT), back = 1u << (x1 > x2 ? BTN_LEFT : BTN_RIGHT);
+    int apart = abs((x2 >> 16) - (x1 >> 16));
+    if (cd.phase == 0) {                        // walk up, as near as the fighters let it
+        cd.stuck = apart < cd.last ? 0 : cd.stuck + 1;
+        cd.last = apart;
+        if (apart > dist && cd.stuck < 8) return fwd;
+        cd.phase = 1;
+        cd.t = 0;
+    }
+    if (cd.phase == 2) {                        // a breath between combos
+        if (++cd.t > 90) { cd.phase = 0; cd.stuck = 0; cd.last = 1000; }
+        return 0;
+    }
+    int t = cd.t++;
+    uint32_t in = 0;
+    int first;                                  // the frame of the first repeat
+    if (kind == 'C') {
+        if (t < 40) in = back;
+        else if (t < 43) in = fwd;
+        if (t >= 41 && t < 44) in |= open;
+        first = 48;
+    } else {
+        if (t < 2) in = 1u << BTN_DOWN;
+        else if (t < 4) in = 1u << BTN_DOWN | fwd;
+        else if (t < 6) in = fwd;
+        if (t >= 5 && t < 8) in |= open;
+        if (t < 10) in |= fwd;                  // still walking in, as found
+        first = 13;
+    }
+    if (t >= first && (t - first) % 5 < 2 && (t - first) / 5 < 12) in |= follow;
+    if (t >= first + 60) { cd.phase = 2; cd.t = 0; }
+    return in;
+}
+
 void training_inputs(uint32_t held[2])
 {
     const uint32_t mask = (1u << BTN_START) - 1;     // directions and attacks only
@@ -193,7 +250,11 @@ void training_inputs(uint32_t held[2])
         uint32_t attacks = mask & ~(0xfu << BTN_UP);
         since_attack = held[0] & ~prev & attacks ? 0 : since_attack < 1000 ? since_attack + 1 : 1000;
         prev = held[0];
-        uint32_t s = stance();
+        uint32_t s = cfg.dummy == DUMMY_COMBO ? combo_dummy() : stance();
+        if (cfg.dummy == DUMMY_COMBO) {
+            held[1] = (held[1] & ~mask) | s;
+            s = 0;
+        }
         // the game takes a direction held since before the round started
         // only once it is let go and pressed again: a dummy standing still
         // when it should not lets go for a frame

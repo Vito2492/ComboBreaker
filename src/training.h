@@ -15,9 +15,10 @@ extern bool training_forced;
 extern bool training_timer_off;
 
 // What player 2 does in training when no recording plays: stands still,
-// crouches, jumps, blocks standing or low (always away from player 1), or,
+// crouches, jumps, blocks standing or low (always away from player 1), walks
+// up and does a combo again and again (its fighter's own, for breaking), or,
 // in the console menu's Practice only, is the game's own CPU fighter.
-enum { DUMMY_STAND, DUMMY_CROUCH, DUMMY_JUMP, DUMMY_BLOCK, DUMMY_LOW_BLOCK, DUMMY_CPU, DUMMY_COUNT };
+enum { DUMMY_STAND, DUMMY_CROUCH, DUMMY_JUMP, DUMMY_BLOCK, DUMMY_LOW_BLOCK, DUMMY_COMBO, DUMMY_CPU, DUMMY_COUNT };
 extern const char *const dummy_names[];     // for the menus, upper case
 
 void training_record_toggle(void);   // start/stop recording the dummy

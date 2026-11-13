@@ -97,6 +97,11 @@ typedef struct {
     // DF...), then P or K.
     uint32_t fighter_combo, fighter_strength, fighter_slot;
     const char *breakers[11];
+    // A combo each fighter can do on any other, for the training dummy to
+    // break: from this far (pixels between the fighters), "C" (back for 40
+    // frames, then forward) or "Q" (down, down-forward, forward), the
+    // opening button (HQ HM HF LQ LM LF), and the button repeated after it.
+    const char *combos[11];
 
     // Operator adjustments on the disk: adj_len bytes at adj_data, the first
     // set once they were edited, with the game's checksum of them at adj_sum.

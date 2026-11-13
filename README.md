@@ -45,7 +45,8 @@ again for the SNES menu:
 - **Practice Game**: player 1 picks both fighters and nobody loses health.
   No health bars or clock, as on the SNES. The pause menu's DUMMY sets what
   the other fighter does: stand, crouch, jump, block (standing or low,
-  whenever you attack), or CPU: the game's own CPU fighter, attacking and
+  whenever you attack), COMBO (walks up and does a combo again and again, to
+  practise breakers), or CPU: the game's own CPU fighter, attacking and
   doing combos, at its own CPU LEVEL (one to five stars). The same setting is in F1 >
   Practice, beside the recorded dummy.
 - **Options**: difficulty (five stars), fixed difficulty, random select,
@@ -226,7 +227,8 @@ arcade, y Start otra vez para abrir el menú de la Super Nintendo:
 - **Practice Game:** el jugador 1 elige los dos personajes y nadie pierde
   vida. Sin barras de vida ni reloj, como en la Super Nintendo. En la pausa,
   DUMMY elige qué hace el rival: quedarse parado, agachado, saltar, cubrirse
-  (parado o agachado, cada vez que atacas) o CPU: el luchador de la máquina,
+  (parado o agachado, cada vez que atacas), COMBO (se acerca y hace un combo una
+  y otra vez, para practicar breakers) o CPU: el luchador de la máquina,
   que ataca y hace combos, con su propio CPU LEVEL (de una a cinco estrellas). La misma opción está en
   F1 > Practice, junto al rival grabado.
 - **Options:** dificultad (cinco estrellas), dificultad fija, personaje al

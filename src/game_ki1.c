@@ -70,6 +70,10 @@ const game_t game_ki1 = {
         "F D DF P",         // Fulgore
         0,                  // Eyedol
     },
+    .combos = {             // found the same way, each tried on T. J. Combo
+        "59 C LQ LM", "51 Q HF HM", "57 C HQ HM", "56 C HQ HM", "53 C LM HM",
+        "58 C HM LM", "64 C HM HM", "98 C HM HQ", "76 Q HQ HM", "63 C LQ HM", 0,
+    },
     .music_set = 0x86240, .music = 0x86241,     // read at 880007a0, table at 8800e4d4
 
     // found by changing the difficulty in the game's operator menu (both versions)

@@ -905,8 +905,9 @@ int main(int argc, char **argv)
             if (trace_from && f == trace_from) cpu_trace = true;
             apply_script(f);
             if (getenv("KI2_TRAINING")) { cfg.training = true; training_apply(true); }   // testing
-            if (getenv("KI2_EASY_BREAKER")) {   // testing: the easy combo breaker on the script's inputs
-                cfg.easy_breaker = true;
+            if (getenv("KI2_EASY_BREAKER") || getenv("KI2_DUMMY")) {   // testing: the easy combo breaker, a training dummy (DUMMY_*), on the script's inputs
+                cfg.easy_breaker = getenv("KI2_EASY_BREAKER") != NULL;
+                if (getenv("KI2_DUMMY")) { cfg.training = true; cfg.dummy = atoi(getenv("KI2_DUMMY")); }
                 uint32_t held[2] = { ~hw.p1 & 0xfffu, ~hw.p2 & 0xfffu };
                 training_inputs(held);
                 hw.p1 = (hw.p1 | 0xfffu) & ~held[0];

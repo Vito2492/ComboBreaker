@@ -115,6 +115,8 @@ Enter elige y Retroceso vuelve.
   pausa, **DUMMY** elige qué hace el rival:
   - STAND, CROUCH, JUMP: quedarse parado, agachado o saltar.
   - BLOCK, LOW BLOCK: se cubre parado o agachado cada vez que atacas.
+  - COMBO: se acerca y te hace un combo propio (de tres a cinco golpes),
+    descansa y vuelve a empezar: para practicar los combo breakers.
   - CPU: el luchador de la máquina, que se mueve, ataca y hace combos.
     **CPU LEVEL**, justo debajo en la pausa, elige qué tan bueno es (de una a
     cinco estrellas, aparte de la dificultad del arcade). Al pasar a CPU o
