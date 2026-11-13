@@ -612,7 +612,7 @@ enum { C_P1, C_P2, C_PAD, C_HOTKEYS, C_PADHOT, C_SOCD, C_RUMBLE, C_DEADZONE, C_P
 // Game & system
 enum { S_VOLUME, S_MUTE_BG, S_PAUSE_BG, S_VERSION, S_DIFFICULTY, S_FREEPLAY, S_BLOOD, S_BLOODCOL, S_FINISH, S_DEMO, S_AUTOCOIN, S_RUNAHEAD, S_REWIND, S_BACK, S_COUNT };
 // Practice
-enum { T_TRAINING, T_INPUTS, T_RECORD, T_PLAY, T_BACK, T_COUNT };
+enum { T_TRAINING, T_DUMMY, T_INPUTS, T_RECORD, T_PLAY, T_BACK, T_COUNT };
 // Netplay
 enum { N_MYCODE, N_THEIRCODE, N_CODECONNECT, N_HOST, N_JOIN, N_ADDRESS, N_PORT, N_DELAY, N_DISCONNECT, N_BACK, N_COUNT };
 static char my_code[32], their_code[32];    // connecting by codes
@@ -861,11 +861,13 @@ static void draw_menu(uint32_t *out)
     case PG_PRACTICE:
         title = "PRACTICE";
         snprintf(b[T_TRAINING], 72, "Training mode\t%s", onoff[cfg.training]);
+        snprintf(b[T_DUMMY], 72, "Dummy\t%s", dummy_names[cfg.dummy % DUMMY_COUNT]);
         snprintf(b[T_INPUTS], 72, "Input display\t%s", onoff[cfg.input_display]);
         snprintf(b[T_RECORD], 72, "Record dummy (player 2)");
         snprintf(b[T_PLAY], 72, "Play / stop dummy");
         snprintf(b[T_BACK], 72, "Back");
-        foot = "START A 2-PLAYER GAME FOR A DUMMY";
+        foot = menu_sel == T_DUMMY && cfg.dummy == DUMMY_CPU ? "CPU: IN THE CONSOLE MENU'S PRACTICE GAME"
+             : "START A 2-PLAYER GAME FOR A DUMMY";
         break;
     case PG_NETPLAY:
         title = "NETPLAY";
@@ -1155,6 +1157,7 @@ static void menu_change(int dir)
     case PG_PRACTICE:
         switch (menu_sel) {
         case T_TRAINING: if (in_netplay()) { not_in_netplay(); return; } cfg.training = !cfg.training; break;
+        case T_DUMMY: cfg.dummy = ((cfg.dummy + (dir ? dir : 1)) % DUMMY_COUNT + DUMMY_COUNT) % DUMMY_COUNT; break;
         case T_INPUTS: cfg.input_display = !cfg.input_display; break;
         case T_RECORD: if (!dir) { if (in_netplay()) not_in_netplay(); else { training_record_toggle(); menu_close(); } } return;
         case T_PLAY: if (!dir) { if (in_netplay()) not_in_netplay(); else { training_play_toggle(); menu_close(); } } return;

@@ -50,9 +50,11 @@ typedef struct {
     bool input_display;
     bool perf_overlay;
     bool training;             // health refill + timer freeze
+    int dummy;                 // what player 2 does in training (DUMMY_* in training.h)
     int touch_controls;        // TOUCH_AUTO / ON / OFF (Android)
     bool home_menu;            // console-style menu (Arcade, VS, Practice, Options) on Start
     bool home_random, home_timer;   // its Options: random select, the fight clock
+    bool home_fixed;           // and FIXED DIFFICULTY: the CPU stays at its first fight's level
     char home_pad[2][8];       // its Options > CONTROLS: the SNES button of each move, e.g. "LYXRBA"
     // the board's DIP switches
     bool free_play;

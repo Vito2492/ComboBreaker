@@ -935,6 +935,12 @@ int main(int argc, char **argv)
             if (trace_from && f == trace_from) cpu_trace = true;
             apply_script(f);
             if (getenv("KI2_TRAINING")) { cfg.training = true; training_apply(true); }   // testing
+            if (getenv("KI2_POKE")) {           // testing: F:OFFSET:VALUE,... sets a RAM byte every frame from F on
+                for (const char *q = getenv("KI2_POKE"); *q; q = strchr(q, ',') ? strchr(q, ',') + 1 : q + strlen(q)) {
+                    unsigned pf, off, v;
+                    if (sscanf(q, "%u:%x:%x", &pf, &off, &v) == 3 && (int)pf <= f && off < RAM2_SIZE) { ram2[off] = (uint8_t)v; ram_touch(&ram2[off]); }
+                }
+            }
             uint64_t t0 = SDL_GetPerformanceCounter();
             run_frame();
             state_checkpoint();

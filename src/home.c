@@ -249,9 +249,9 @@ static void stage_frame(uint32_t held[2])
 enum { MODE_NONE, MODE_ARCADE, MODE_VS, MODE_TOURNAMENT, MODE_PRACTICE };
 enum { PAGE_CLOSED, PAGE_MAIN, PAGE_OPTIONS, PAGE_PAUSE, PAGE_ROSTER, PAGE_NEXT };
 enum { MAIN_ARCADE, MAIN_VS, MAIN_TOURNAMENT, MAIN_PRACTICE, MAIN_OPTIONS, MAIN_COUNT };
-enum { OPT_DIFFICULTY, OPT_RANDOM, OPT_TIMER, OPT_BLOOD, OPT_FINISH,
+enum { OPT_DIFFICULTY, OPT_FIXED, OPT_RANDOM, OPT_TIMER, OPT_BLOOD, OPT_FINISH,
        OPT_WP, OPT_MP, OPT_FP, OPT_WK, OPT_MK, OPT_FK, OPT_RESET, OPT_EXIT, OPT_COUNT };
-enum { PAUSE_CONTINUE, PAUSE_MENU, PAUSE_COUNT };
+enum { PAUSE_CONTINUE, PAUSE_DUMMY, PAUSE_MENU, PAUSE_COUNT };   // DUMMY: Practice only
 
 // as on the SNES title screen
 static const char *const main_items[MAIN_COUNT] = { "1 PLAYER GAME", "2 PLAYER GAME", "TOURNAMENT GAME", "PRACTICE GAME", "OPTIONS" };
@@ -272,6 +272,17 @@ static struct {
     bool title_saved;           // a state at the title screen to come back to
     bool restore;               // load that state now (from the pause panel)
     bool route_armed;           // practice: player 1 has let go since picking
+    // Practice against the CPU: a one-player game where player 1 picks his
+    // fighter (kept, not yet given to the game), then the CPU's, then the
+    // game gets the first pick and the second becomes every opponent.
+    bool cpu;
+    int cpu_step;               // 0 picking his own, 1 the CPU's, 2 picked
+    uint8_t own, opp;
+    int cpu_wait;               // frames the cursor shows his fighter before it is picked
+    uint32_t cpu_button;        // the button that picked the CPU's, to pick his
+    int cpu_last;               // the cursor before the last step back, -1 none
+    bool cpu_dir;               // stepping back to the left
+    int pause_dummy;            // the dummy as the pause panel was opened
     uint32_t prev[2];           // last frame's buttons, for presses
     unsigned mprev;             // last frame's menu buttons (frontend_menu_buttons)
     int repeat, repeat_dir;     // held up/down auto-repeat
@@ -430,6 +441,63 @@ static int health_of(int p) { return ram2[game.health_p1 + (uint32_t)p * game.he
 
 static bool scene_up(void) { return ram2[game.fight_scene] != 0; }
 
+// FIXED DIFFICULTY: the arcade raises the CPU's level fight by fight from a
+// table, and adjusts it for wins and losses; this keeps it at the table's
+// first level for the difficulty the game booted with. The game sets the
+// level once as a fight starts and its fighters read it all through, so
+// setting it back every frame is enough.
+static void hold_level(void)
+{
+    if (!game.cpu_level || !game.level_table || !game.difficulty || !(in_game(0) ^ in_game(1))) return;
+    unsigned d = ram2[game.difficulty];
+    if (d > 4) return;
+    uint8_t lv = ram2[game.level_table + 16 * d];
+    if (lv >= 1 && lv <= 50) poke(game.cpu_level, lv);
+}
+
+// Practice against the CPU, on the one-player character screen: the first
+// pick is held back and kept, the cursor then chooses the CPU's fighter, and
+// with that pick the cursor goes back to the first and picks it. Every opponent of the game is the CPU's choice,
+// so the same fighter comes back if the fight ever ends.
+static void cpu_pick(uint32_t held[2], const uint32_t pressed[2])
+{
+    const uint32_t attacks = (1u << BTN_START) - 1 - (0xfu << BTN_UP);
+    if (h.cpu_step == 2) {
+        for (uint32_t i = 0; i < 11; i++) poke(game.opponents + i, h.opp);
+        if (in_game(0) && !picked(0)) {             // until the game has taken it
+            held[0] &= ~((0xfu << BTN_UP) | attacks);
+            if (h.cpu_wait > 0) h.cpu_wait--;
+            else if (ram2[game.cursor] != h.own) {
+                // right, or left once right goes no further
+                if (ram2[game.cursor] == h.cpu_last) h.cpu_dir = !h.cpu_dir;
+                h.cpu_last = ram2[game.cursor];
+                held[0] |= 1u << (h.cpu_dir ? BTN_LEFT : BTN_RIGHT);
+                h.cpu_wait = 12;
+            }
+            else held[0] |= h.cpu_button;
+        }
+        return;
+    }
+    if (!in_game(0) || picked(0)) return;
+    bool press = (pressed[0] & attacks) != 0;
+    if (h.cpu_step == 0 && press) {
+        h.own = ram2[game.cursor];
+        h.cpu_step = 1;
+    } else if (h.cpu_step == 1 && press) {
+        h.opp = ram2[game.cursor];
+        for (uint32_t i = 0; i < 11; i++) poke(game.opponents + i, h.opp);
+        // the cursor goes back to his fighter, a place at a time as if
+        // he moved it, and the same button picks it
+        h.cpu_wait = 6;
+        h.cpu_last = -1;
+        h.cpu_dir = false;
+        h.cpu_button = pressed[0] & attacks & (0u - (pressed[0] & attacks));
+        h.cpu_step = 2;
+        fprintf(stderr, "home: practice: player 1 fighter %d, CPU %d\n", h.own, h.opp);
+    }
+    held[0] &= ~attacks;
+}
+
 // A match is over once the game moves on to its own screens after it
 // (continue, high scores): that waits for the winner's whole moment,
 // finishing move, ultimate, and the victory screen (supreme or awesome
@@ -522,6 +590,8 @@ void home_reset(void)
     spd.speed = 1;
     spd.chosen = false;
     training_forced = false;
+    h.cpu = false;
+    h.cpu_step = 0;
     h.mode = MODE_NONE;
     h.page = PAGE_CLOSED;
     h.starting = false;
@@ -556,6 +626,7 @@ static void change_option(int dir)
         h.switches_changed = true;      // the game reads it at power-on
         break;
     }
+    case OPT_FIXED: cfg.home_fixed = !cfg.home_fixed; break;
     case OPT_RANDOM: cfg.home_random = !cfg.home_random; break;
     case OPT_TIMER: cfg.home_timer = !cfg.home_timer; break;
     case OPT_BLOOD: cfg.blood = ((cfg.blood + d) % 4 + 4) % 4; h.switches_changed = true; break;
@@ -593,7 +664,9 @@ static void change_option(int dir)
 static void start_mode(int mode)
 {
     h.mode = mode;
-    h.want_players = mode == MODE_ARCADE ? 1 : 2;
+    h.cpu = mode == MODE_PRACTICE && cfg.dummy == DUMMY_CPU && game.opponents && game.cursor;
+    h.cpu_step = 0;
+    h.want_players = mode == MODE_ARCADE || h.cpu ? 1 : 2;
     training_forced = mode == MODE_PRACTICE;
     h.page = PAGE_CLOSED;
     h.starting = true;
@@ -681,6 +754,7 @@ static void menu_frame(const uint32_t held[2])
     }
     int n = page_items();
     if (ud) h.sel = (h.sel + ud + n) % n;
+    if (ud && h.page == PAGE_PAUSE && h.sel == PAUSE_DUMMY && h.mode != MODE_PRACTICE) h.sel = (h.sel + ud + n) % n;
     if (h.page == PAGE_MAIN) {
         if (ok) choose(h.sel);
     } else if (h.page == PAGE_OPTIONS) {
@@ -698,8 +772,18 @@ static void menu_frame(const uint32_t held[2])
         else if (ok) change_option(0);
         else if (back) { h.sel = OPT_EXIT; change_option(0); }
     } else if (h.page == PAGE_PAUSE) {
-        if (back || (ok && h.sel == PAUSE_CONTINUE)) h.page = PAGE_CLOSED;
-        else if (ok && h.sel == PAUSE_MENU) {
+        if (h.sel == PAUSE_DUMMY && (lr || ok)) {
+            int d = lr ? lr : 1;
+            cfg.dummy = ((cfg.dummy + d) % DUMMY_COUNT + DUMMY_COUNT) % DUMMY_COUNT;
+            frontend_settings_changed();
+        } else if (back || (ok && h.sel == PAUSE_CONTINUE)) {
+            h.page = PAGE_CLOSED;
+            // to or from the CPU: that is another kind of game, picked again
+            if ((h.pause_dummy == DUMMY_CPU) != (cfg.dummy == DUMMY_CPU) && h.mode == MODE_PRACTICE) {
+                h.again = MODE_PRACTICE;
+                h.restore = true;
+            }
+        } else if (ok && h.sel == PAUSE_MENU) {
             h.page = PAGE_CLOSED;
             h.restore = true;
         }
@@ -888,6 +972,9 @@ void home_inputs(uint32_t held[2])
 
     if (h.press > 0) { held[h.press_player] |= 1u << BTN_START; h.press--; }
 
+    if (h.mode == MODE_PRACTICE && h.cpu && !h.starting) cpu_pick(held, pressed);
+    if (h.mode == MODE_PRACTICE && h.cpu) hold_level();
+
     // Practice: player 1 picks both fighters, then the dummy stands still.
     if (h.mode == MODE_PRACTICE && in_game(1)) {
         uint32_t moves = (1u << BTN_START) - 1;
@@ -905,6 +992,7 @@ void home_inputs(uint32_t held[2])
     if (h.mode == MODE_TOURNAMENT) tn_frame();
     if (h.mode == MODE_VS || h.mode == MODE_PRACTICE || h.mode == MODE_TOURNAMENT) music_frame();
     if (h.mode != MODE_NONE) speed_frame(held);
+    if (h.mode == MODE_ARCADE && cfg.home_fixed) hold_level();
 
     // In one of the menu's modes, Start pauses at any time, as on the
     // console, except where the game itself wants it: the continue
@@ -919,6 +1007,7 @@ void home_inputs(uint32_t held[2])
             held[0] &= ~(1u << BTN_START);
             held[1] &= ~(1u << BTN_START);
             open_page(PAGE_PAUSE, PAUSE_CONTINUE);
+            h.pause_dummy = cfg.dummy;
             break;
         }
     }
@@ -1074,7 +1163,7 @@ static void draw_options(uint32_t *ov)
     int dl = adjust_difficulty();
     char line[48];
     for (int i = OPT_DIFFICULTY; i <= OPT_FINISH; i++) {
-        int y = 34 + i * 14;
+        int y = 32 + i * 12;
         uint32_t c = i == h.sel ? C_SEL : C_ITEM;
         switch (i) {
         case OPT_DIFFICULTY:
@@ -1082,6 +1171,7 @@ static void draw_options(uint32_t *ov)
             stars(ov, 186, y + 1, dl < 1 || dl > 5 ? 0 : dl, a);
             text(ov, F_BODY, 236, y, "HARD", c, a);
             continue;
+        case OPT_FIXED: snprintf(line, sizeof line, "FIXED DIFFICULTY: %s", cfg.home_fixed ? "YES" : "NO"); break;
         case OPT_RANDOM: snprintf(line, sizeof line, "RANDOM SELECT: %s", cfg.home_random ? "ON" : "OFF"); break;
         case OPT_TIMER: snprintf(line, sizeof line, "TIMER: %s", cfg.home_timer ? "ON" : "OFF"); break;
         case OPT_BLOOD: snprintf(line, sizeof line, "BLOOD: %s", blood_names[cfg.blood & 3]); break;
@@ -1168,10 +1258,18 @@ static void draw_next(uint32_t *ov)
 static void draw_pause(uint32_t *ov)
 {
     veil(ov, 150);
-    static const char *const items[PAUSE_COUNT] = { "CONTINUE", "MAIN MENU" };
+    char dummy[32];
+    snprintf(dummy, sizeof dummy, "DUMMY: %s", dummy_names[cfg.dummy % DUMMY_COUNT]);
+    const char *const items[PAUSE_COUNT] = { "CONTINUE", dummy, "MAIN MENU" };
     text_c(ov, F_BIG, 90, "PAUSE", C_ITEM, 255);
-    for (int i = 0; i < PAUSE_COUNT; i++)
-        text_c(ov, F_BODY, 120 + i * 16, items[i], i == h.sel ? C_SEL : C_ITEM, fade_in());
+    int y = 120;
+    for (int i = 0; i < PAUSE_COUNT; i++) {
+        if (i == PAUSE_DUMMY && h.mode != MODE_PRACTICE) continue;
+        text_c(ov, F_BODY, y, items[i], i == h.sel ? C_SEL : C_ITEM, fade_in());
+        y += 16;
+    }
+    if (h.mode == MODE_PRACTICE && h.sel == PAUSE_DUMMY)
+        text_c(ov, F_SMALL, 222, (cfg.dummy == DUMMY_CPU) != (h.pause_dummy == DUMMY_CPU) ? "FIGHTERS ARE PICKED AGAIN" : "LEFT/RIGHT: CHANGE", C_DIM, 255);
 }
 
 // Practice as on the SNES: no health bars or clock, just its name. The
@@ -1184,6 +1282,14 @@ static void draw_practice_hud(uint32_t *ov)
     }
     text(ov, F_BODY, 8, 6, "PRACTICE", C_ITEM, 255);
     if ((h.anim++ / 40) % 2 == 0) text(ov, F_SMALL, 104, 8, "- PRESS START", C_ITEM, 255);
+}
+
+// Practice against the CPU: which of the two picks this is.
+static void draw_cpu_pick(uint32_t *ov)
+{
+    for (int y = 0; y < 22; y++)
+        for (int x = 0; x < 320; x++) blend(&ov[y * 320 + x], 0x000000, y < 16 ? 200 : 200 - (unsigned)(y - 15) * 30);
+    text_c(ov, F_BODY, 5, h.cpu_step == 0 ? "PRACTICE: PICK YOUR FIGHTER" : "PRACTICE: PICK THE CPU FIGHTER", C_SEL, 255);
 }
 
 // Tournament: the SNES NEXT FIGHT screen, laid over the arcade's own
@@ -1225,6 +1331,10 @@ void home_draw(uint32_t *ov)
         return;
     }
     if (h.page == PAGE_CLOSED && h.mode == MODE_PRACTICE && fighting()) { draw_practice_hud(ov); return; }
+    if (h.page == PAGE_CLOSED && h.mode == MODE_PRACTICE && h.cpu && h.cpu_step < 2 && in_game(0) && !picked(0) && !h.starting) {
+        draw_cpu_pick(ov);
+        return;
+    }
     if (h.page == PAGE_CLOSED) return;
     maybe_save_title();
     switch (h.page) {

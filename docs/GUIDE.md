@@ -104,10 +104,21 @@ and Backspace.
   records and the waiting line below. The winner stays on against the next
   in line; the loser goes to the back. The victory screen (supreme, awesome,
   perfect) plays in full; the arcade's continue and high scores don't.
-- **Practice Game:** player 1 picks both fighters. The dummy stands still and
-  nobody loses health. No health bars or clock, as on the Super Nintendo.
-- **Options:** difficulty (one to five stars), random select, timer, blood,
-  finishing moves, and the controls table to remap each player's buttons.
+- **Practice Game:** player 1 picks both fighters (his own first) and nobody
+  loses health. No health bars or clock, as on the Super Nintendo. In the
+  pause menu, **DUMMY** chooses what the other fighter does:
+  - STAND, CROUCH, JUMP: just that.
+  - BLOCK, LOW BLOCK: blocks standing or crouching whenever you attack.
+  - CPU: the game's own CPU fighter, which moves, attacks and does combos at
+    the difficulty's level. Changing to or from CPU takes you back to the
+    character screen.
+
+  The same setting is in F1 > Practice, beside the recorded dummy.
+- **Options:** difficulty (one to five stars), fixed difficulty, random
+  select, timer, blood, finishing moves, and the controls table to remap
+  each player's buttons. The arcade game gets harder fight by fight; with
+  **FIXED DIFFICULTY: YES** the CPU stays at the chosen difficulty's first
+  level for the whole game.
 
 ### Pause
 
