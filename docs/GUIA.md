@@ -110,11 +110,21 @@ Enter elige y Retroceso vuelve.
   ganador se queda y pelea contra el siguiente de la lista; el que pierde va
   al final de la fila. La pantalla de victoria (Supreme, Awesome, Perfect) se
   ve completa; los récords y el continue del arcade no aparecen.
-- **Practice Game:** el jugador 1 elige los dos personajes. El rival se queda
-  quieto y nadie pierde vida. Sin barras ni reloj, como en la Super Nintendo.
-- **Options:** dificultad (de una a cinco estrellas), personaje al azar,
-  reloj, sangre, finishing moves, y la tabla de controles para cambiar los
-  botones de cada jugador.
+- **Practice Game:** el jugador 1 elige los dos personajes (primero el suyo)
+  y nadie pierde vida. Sin barras ni reloj, como en la Super Nintendo. En la
+  pausa, **DUMMY** elige qué hace el rival:
+  - STAND, CROUCH, JUMP: quedarse parado, agachado o saltar.
+  - BLOCK, LOW BLOCK: se cubre parado o agachado cada vez que atacas.
+  - CPU: el luchador de la máquina, que se mueve, ataca y hace combos al
+    nivel de la dificultad. Al pasar a CPU o salir de CPU vuelves a la
+    pantalla de personajes.
+
+  La misma opción está en F1 > Practice, junto al rival grabado.
+- **Options:** dificultad (de una a cinco estrellas), dificultad fija,
+  personaje al azar, reloj, sangre, finishing moves, y la tabla de controles
+  para cambiar los botones de cada jugador. En el arcade la máquina se pone
+  más difícil pelea a pelea; con **FIXED DIFFICULTY: YES** se queda en el
+  nivel inicial de la dificultad elegida toda la partida.
 
 ### Pausa
 

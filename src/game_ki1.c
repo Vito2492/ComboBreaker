@@ -48,6 +48,12 @@ const game_t game_ki1 = {
     // set by the routine at 8802cf60 as the continue and high-score screens
     // start (after the victory screen, when there is one), cleared at 8802d01c
     .after_match = 0x40e50,
+    // the level routine at 880005b0: level = table[difficulty][fight] plus
+    // an adjustment, stored once per fight at 88000690
+    .cpu_level = 0x8dc2c, .level_table = 0x55c, .difficulty = 0x3a168,
+    // found by setting them in RAM and watching who comes out
+    .opponents = 0x8f428, .cursor = 0x8f314,
+    .fighter_x = 0x8bc68, .fighter_state = 0x8bc1c,     // by holding directions in a fight
     .music_set = 0x86240, .music = 0x86241,     // read at 880007a0, table at 8800e4d4
 
     // found by changing the difficulty in the game's operator menu (both versions)

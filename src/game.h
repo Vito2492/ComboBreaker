@@ -77,6 +77,18 @@ typedef struct {
     uint32_t fight_scene;
     // non-zero while the screens after a match (continue, high scores) are up
     uint32_t after_match;
+    // The CPU's skill, 1 to 50, set as each one-player fight starts from a
+    // table (level_table: 16 bytes per difficulty, a level per fight, then
+    // the bounds of the adjustment for wins and losses) and read by the
+    // fighters' AI all through it. difficulty: the setting the game booted
+    // with, 0 to 4.
+    uint32_t cpu_level, level_table, difficulty;
+    // The one-player game's opponents, one byte each in fight order (11,
+    // drawn as a game starts), by their place on the character screen;
+    // player 1's cursor there (16 bits, the place), moved by the game alone.
+    uint32_t opponents, cursor;
+    uint32_t fighter_x;         // 32 bits per fighter, health_step apart: position across the screen, 16.16
+    uint32_t fighter_state;     // a byte per fighter, health_step apart: 0 standing still
 
     // Operator adjustments on the disk: adj_len bytes at adj_data, the first
     // set once they were edited, with the game's checksum of them at adj_sum.
