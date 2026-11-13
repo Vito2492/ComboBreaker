@@ -34,6 +34,7 @@
 #include "game.h"
 #include "training.h"
 #include "home.h"
+#include "adjust.h"
 #ifdef __ANDROID__
 #include "android.h"
 #endif
@@ -917,6 +918,10 @@ int main(int argc, char **argv)
         rec_unload();
         machine_reset();
         if (!getenv("KI2_NOREC") && rec_build_load_cached(msg, sizeof msg)) fprintf(stderr, "rec: %s\n", msg);
+    }
+    if (getenv("KI2_DIFFICULTY")) {         // testing: the CPU difficulty (1-5), as Options sets it
+        adjust_set_difficulty(atoi(getenv("KI2_DIFFICULTY")));
+        machine_reset();
     }
     if (headless && (net_host || net_join)) return headless_netplay(headless, net_host, net_join, net_delay, net_fps, net_lat, net_jit, net_loss);
 

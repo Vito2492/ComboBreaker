@@ -23,6 +23,8 @@ bool home_enabled(void);
 double home_speed(void);
 // The machine was reset or a state was loaded: forget any mode in progress.
 void home_reset(void);
+// A save state was loaded: close the menu, go on in the mode it shows.
+void home_state_loaded(void);
 
 // Online (netplay): the console's 2 Player game, run on both sides from
 // both players' inputs as part of the emulation (machine_run_inputs), with

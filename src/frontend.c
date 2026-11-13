@@ -560,6 +560,7 @@ static void load_state(void)
     if (!f) { osd_message("State %d is empty", slot()); return; }
     fclose(f);
     if (!state_load_file(path)) { osd_message("State %d is from another version", slot()); return; }
+    home_state_loaded();
     ac.active = false;
     if (frame_count < (uint64_t)cfg.boot_skip_frames) frame_count = (uint64_t)cfg.boot_skip_frames;
     stop_audio();
