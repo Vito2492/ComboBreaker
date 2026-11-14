@@ -260,7 +260,7 @@ enum { PAGE_CLOSED, PAGE_MAIN, PAGE_OPTIONS, PAGE_PAUSE, PAGE_ROSTER, PAGE_NEXT 
 enum { MAIN_ARCADE, MAIN_VS, MAIN_TOURNAMENT, MAIN_PRACTICE, MAIN_OPTIONS, MAIN_COUNT };
 enum { OPT_DIFFICULTY, OPT_FIXED, OPT_RANDOM, OPT_TIMER, OPT_BLOOD, OPT_FINISH, OPT_BREAKER,
        OPT_WP, OPT_MP, OPT_FP, OPT_WK, OPT_MK, OPT_FK, OPT_RESET, OPT_EXIT, OPT_COUNT };
-enum { PAUSE_CONTINUE, PAUSE_MOVES, PAUSE_DUMMY, PAUSE_LEVEL, PAUSE_MENU, PAUSE_COUNT };   // MOVES: in a fight, DUMMY: Practice only, LEVEL: against the CPU
+enum { PAUSE_CONTINUE, PAUSE_MOVES, PAUSE_CODES, PAUSE_DUMMY, PAUSE_LEVEL, PAUSE_MENU, PAUSE_COUNT };   // MOVES: in a fight, DUMMY: Practice only, LEVEL: against the CPU
 
 // as on the SNES title screen
 static const char *const main_items[MAIN_COUNT] = { "1 PLAYER GAME", "2 PLAYER GAME", "TOURNAMENT GAME", "PRACTICE GAME", "OPTIONS" };
@@ -291,8 +291,8 @@ static struct {
     uint32_t cpu_button;        // the button that picked the CPU's, to pick his
     int pause_dummy;            // the dummy as the pause panel was opened
     int pause_player;           // who paused: whose MOVE LIST
-    bool moves_open;            // the pause panel shows the MOVE LIST
-    int moves_top;              // its first line shown
+    int list;                   // the pause panel shows a list: LIST_MOVES, LIST_CODES, or 0
+    int list_top;               // its first line shown
     uint32_t prev[2];           // last frame's buttons, for presses
     unsigned mprev;             // last frame's menu buttons (frontend_menu_buttons)
     int repeat, repeat_dir;     // held up/down auto-repeat
@@ -776,7 +776,10 @@ static int page_items(void)
 // Practice against the CPU: its level in stars, 10 to 50 of the game's 50
 static int practice_stars(void) { return cfg.practice_level < 1 ? 1 : cfg.practice_level > 5 ? 5 : cfg.practice_level; }
 
+static int letter_slot(char c);
+
 // The MOVE LIST of the fighter of the player who paused, if known.
+enum { LIST_MOVES = 1, LIST_CODES };
 static const char *moves_text(void)
 {
     if (!game.moves || !game.fighter_slot || !fighting()) return NULL;
@@ -784,18 +787,50 @@ static const char *moves_text(void)
     return slot < 11 ? game.moves[slot] : NULL;
 }
 
-static int moves_lines(const char *m)
+// The list shown: the moves or the codes, then what the shorthand means,
+// with the buttons of the player who paused. Lines as in game.h's moves,
+// and '~' for "SHORTHAND|MEANING"; {F} {B} {U} {D} {DF} {DB} draw arrows.
+static char list_buf[8192];
+
+static void list_build(void)
+{
+    const char *body = h.list == LIST_CODES ? game.codes : moves_text();
+    int n = snprintf(list_buf, sizeof list_buf, "%s", body ? body : "");
+    char b[6][40];
+    for (int a = 0; a < 6; a++) {
+        int slot = letter_slot(cfg.home_pad[h.pause_player][a]);
+        snprintf(b[a], sizeof b[a], "%s", frontend_button_name(h.pause_player, slot < 0 ? a : slot));
+        for (char *c = b[a]; *c; c++) *c = (char)toupper((unsigned char)*c);
+    }
+    if (n < 0 || n >= (int)sizeof list_buf) return;
+    snprintf(list_buf + n, sizeof list_buf - (size_t)n,
+        "#WHAT IT ALL MEANS\n"
+        "~F|FORWARD {F}\n~B|BACK {B}\n~U|UP {U}\n~D|DOWN {D}\n"
+        "~DF|DOWN-FORWARD {DF}\n~DB|DOWN-BACK {DB}\n"
+        "~QCF|{D}{DF}{F}\n~QCB|{D}{DB}{B}\n"
+        "~HCF|{B}{DB}{D}{DF}{F}\n~HCB|{F}{DF}{D}{DB}{B}\n"
+        "~CB,F|HOLD {B} 1 SEC, THEN {F}\n~CF,B|HOLD {F} 1 SEC, THEN {B}\n"
+        "~QP|QUICK PUNCH (%s)\n~MP|MEDIUM PUNCH (%s)\n~FP|FIERCE PUNCH (%s)\n"
+        "~QK|QUICK KICK (%s)\n~MK|MEDIUM KICK (%s)\n~FK|FIERCE KICK (%s)\n"
+        "~P|ANY PUNCH (%s %s %s)\n~K|ANY KICK (%s %s %s)\n"
+        "~H|HOLD THE BUTTON\n~R|LET GO OF IT\n"
+        "~CLOSE|NEXT TO THE FOE\n~2 AWAY|TWO FIGHTERS' WIDTH AWAY\n",
+        b[0], b[1], b[2], b[3], b[4], b[5], b[0], b[1], b[2], b[3], b[4], b[5]);
+}
+
+static int list_lines(void)
 {
     int n = 0;
-    for (; m && *m; m++) n += *m == '\n';
+    for (const char *m = list_buf; *m; m++) n += *m == '\n';
     return n;
 }
 
-#define MOVES_SHOWN 14
+#define LIST_SHOWN 17
 
 static bool pause_shown(int item)
 {
     if (item == PAUSE_MOVES) return moves_text() != NULL;
+    if (item == PAUSE_CODES) return game.codes != NULL;
     if (item == PAUSE_DUMMY) return h.mode == MODE_PRACTICE;
     if (item == PAUSE_LEVEL) return h.mode == MODE_PRACTICE && cfg.dummy == DUMMY_CPU;
     return true;
@@ -817,7 +852,7 @@ static void menu_frame(const uint32_t held[2])
         return;
     }
     int n = page_items();
-    if (h.page == PAGE_PAUSE && h.moves_open) n = 0;           // the list scrolls instead
+    if (h.page == PAGE_PAUSE && h.list) n = 0;                 // the list scrolls instead
     if (ud && n) h.sel = (h.sel + ud + n) % n;
     if (ud && n && h.page == PAGE_PAUSE) while (!pause_shown(h.sel)) h.sel = (h.sel + ud + n) % n;
     if (h.page == PAGE_MAIN) {
@@ -836,14 +871,15 @@ static void menu_frame(const uint32_t held[2])
         if (lr) change_option(lr);
         else if (ok) change_option(0);
         else if (back) { h.sel = OPT_EXIT; change_option(0); }
-    } else if (h.page == PAGE_PAUSE && h.moves_open) {
-        int top = h.moves_top + ud, most = moves_lines(moves_text()) - MOVES_SHOWN;
-        h.moves_top = top < 0 ? 0 : top > most ? (most > 0 ? most : 0) : top;
-        if (back || ok) h.moves_open = false;
+    } else if (h.page == PAGE_PAUSE && h.list) {
+        int top = h.list_top + ud * (lr ? 1 : 1) + lr * LIST_SHOWN, most = list_lines() - LIST_SHOWN;
+        h.list_top = top < 0 ? 0 : top > most ? (most > 0 ? most : 0) : top;
+        if (back || ok) h.list = 0;
     } else if (h.page == PAGE_PAUSE) {
-        if (h.sel == PAUSE_MOVES && ok) {
-            h.moves_open = true;
-            h.moves_top = 0;
+        if ((h.sel == PAUSE_MOVES || h.sel == PAUSE_CODES) && ok) {
+            h.list = h.sel == PAUSE_MOVES ? LIST_MOVES : LIST_CODES;
+            h.list_top = 0;
+            list_build();
         } else if (h.sel == PAUSE_LEVEL && (lr || ok)) {
             int l = practice_stars() + (lr ? lr : 1);
             cfg.practice_level = l < 1 ? 5 : l > 5 ? 1 : l;
@@ -1084,7 +1120,7 @@ void home_inputs(uint32_t held[2])
             open_page(PAGE_PAUSE, PAUSE_CONTINUE);
             h.pause_dummy = cfg.dummy;
             h.pause_player = p;
-            h.moves_open = false;
+            h.list = 0;
             break;
         }
     }
@@ -1243,54 +1279,105 @@ static void draw_next(uint32_t *ov)
     }
 }
 
-// The MOVE LIST: a heading per kind of move, names on the left, inputs on
-// the right, scrolled with up and down; what the shorthand means below.
-static void draw_moves(uint32_t *ov)
+// An arrow for the lists, 9 pixels wide, pointing one of eight ways
+// (dx, dy each -1, 0 or 1; forward is to the right).
+static void arrow(uint32_t *ov, int x, int y, int dx, int dy, uint32_t c)
+{
+    int cx = x + 4, cy = y + 4;
+    for (int i = -3; i <= 3; i++) {
+        int px = cx + dx * i, py = cy + dy * i;
+        if (px >= 0 && px < 320 && py >= 0 && py < 240) blend(&ov[py * 320 + px], c, 255);
+    }
+    // the head: two strokes back from the tip, 45 degrees either side
+    int tx = cx + dx * 3, ty = cy + dy * 3;
+#define SGN(v) (((v) > 0) - ((v) < 0))
+    int ax = SGN(-dx - dy), ay = SGN(-dy + dx), bx = SGN(-dx + dy), by = SGN(-dy - dx);
+#undef SGN
+    for (int i = 1; i <= 2; i++) {
+        int p1x = tx + ax * i, p1y = ty + ay * i, p2x = tx + bx * i, p2y = ty + by * i;
+        if (p1x >= 0 && p1x < 320 && p1y >= 0 && p1y < 240) blend(&ov[p1y * 320 + p1x], c, 255);
+        if (p2x >= 0 && p2x < 320 && p2y >= 0 && p2y < 240) blend(&ov[p2y * 320 + p2x], c, 255);
+    }
+}
+
+// Text with {F}-style arrows in it; returns its width. Draws nothing when
+// ov is NULL (to measure).
+static int rich(uint32_t *ov, int x, int y, const char *s, uint32_t c)
+{
+    int x0 = x;
+    char run[96];
+    int n = 0;
+    for (;;) {
+        if (*s == '{' || !*s) {
+            run[n] = 0;
+            if (n) { if (ov) text(ov, F_SMALL, x, y, run, c, 255); x += text_width(F_SMALL, run); }
+            n = 0;
+            if (!*s) break;
+            const char *e = strchr(s, '}');
+            if (!e) break;
+            char d[4] = { 0 };
+            snprintf(d, sizeof d, "%.*s", (int)(e - s - 1), s + 1);
+            int dx = strchr(d, 'F') ? 1 : strchr(d, 'B') ? -1 : 0, dy = strchr(d, 'D') ? 1 : strchr(d, 'U') ? -1 : 0;
+            if (ov) arrow(ov, x, y, dx, dy, c);
+            x += 10;
+            s = e + 1;
+        } else if (n < (int)sizeof run - 1) run[n++] = *s++;
+        else s++;
+    }
+    return x - x0;
+}
+
+// A list in the pause panel (MOVE LIST, CODES): headings, names on the
+// left, inputs on the right, notes, then the shorthand; scrolled with up
+// and down (left and right a page).
+static void draw_list(uint32_t *ov)
 {
     veil(ov, 215);
-    const char *m = moves_text();
-    if (!m) { h.moves_open = false; return; }
-    unsigned slot = ram2[game.fighter_slot + (uint32_t)h.pause_player * game.player_step];
-    const char *name = slot < 11 && game.fighter_names[slot] ? game.fighter_names[slot] : "";
-    text_c(ov, F_BIG, 6, name, C_SEL, 255);
-    int line = 0, y = 32, shown = 0;
-    while (*m && shown < MOVES_SHOWN) {
+    if (h.list == LIST_MOVES && !moves_text()) { h.list = 0; return; }
+    const char *title = "CODES (NOT TESTED)";
+    if (h.list == LIST_MOVES) {
+        unsigned slot = ram2[game.fighter_slot + (uint32_t)h.pause_player * game.player_step];
+        title = slot < 11 && game.fighter_names[slot] ? game.fighter_names[slot] : "MOVE LIST";
+    }
+    text_c(ov, h.list == LIST_MOVES ? F_BIG : F_BODY, 6, title, C_SEL, 255);
+    const char *m = list_buf;
+    int line = 0, y = 30, shown = 0;
+    while (*m && shown < LIST_SHOWN) {
         const char *end = strchr(m, '\n');
         int len = end ? (int)(end - m) : (int)strlen(m);
-        if (line++ >= h.moves_top) {
-            char buf[80], in[80];
+        if (line++ >= h.list_top) {
+            char buf[120];
             snprintf(buf, sizeof buf, "%.*s", len, m);
             for (char *c = buf; *c; c++) *c = (char)toupper((unsigned char)*c);
             char *bar = strchr(buf, '|');
+            if (bar) *bar++ = 0;
             if (buf[0] == '#') text(ov, F_SMALL, 10, y, buf + 1, C_SEL, 255);
-            else if (bar) {
-                *bar = 0;
-                snprintf(in, sizeof in, "%s", bar + 1);
+            else if (buf[0] == '!') text(ov, F_SMALL, 18, y, buf + 1, C_DIM, 255);
+            else if (buf[0] == '~') {
+                text(ov, F_SMALL, 18, y, buf + 1, C_SEL, 255);
+                if (bar) rich(ov, 82, y, bar, 0xffffff);
+            } else {
                 text(ov, F_SMALL, 18, y, buf, C_ITEM, 255);
-                text(ov, F_SMALL, 312 - text_width(F_SMALL, in), y, in, 0xffffff, 255);
+                if (bar) rich(ov, 312 - rich(NULL, 0, 0, bar, 0), y, bar, 0xffffff);
             }
             y += 11;
             shown++;
         }
         m = end ? end + 1 : m + len;
     }
-    int total = moves_lines(moves_text());
-    if (h.moves_top > 0) text(ov, F_SMALL, 300, 22, "^", C_ITEM, 255);
-    if (h.moves_top + MOVES_SHOWN < total) text(ov, F_SMALL, 300, 32 + MOVES_SHOWN * 11, "v", C_ITEM, 255);
-    static const char *const legend[] = {
-        "F TOWARD, B AWAY.  QCF: D,DF,F", "QCB: D,DB,B.  HCF: B,DB,D,DF,F", "HCB: F,DF,D,DB,B.  CB,F: HOLD B, F",
-        "QP MP FP, QK MK FK: QUICK MED FIERCE", "P/K: ANY PUNCH/KICK.  H HOLD, R LET GO",
-    };
-    for (int i = 0; i < 5; i++) text_c(ov, F_SMALL, 187 + i * 10, legend[i], C_DIM, 255);
+    int total = list_lines();
+    if (h.list_top > 0) text(ov, F_SMALL, 300, 20, "^", C_ITEM, 255);
+    if (h.list_top + LIST_SHOWN < total) text(ov, F_SMALL, 300, 30 + LIST_SHOWN * 11 - 4, "v", C_ITEM, 255);
+    text_c(ov, F_SMALL, 228, "UP/DOWN SCROLL   A/B BACK", C_DIM, 255);
 }
 
 static void draw_pause(uint32_t *ov)
 {
-    if (h.moves_open) { draw_moves(ov); return; }
+    if (h.list) { draw_list(ov); return; }
     veil(ov, 150);
     char dummy[32];
     snprintf(dummy, sizeof dummy, "DUMMY: %s", dummy_names[cfg.dummy % DUMMY_COUNT]);
-    const char *const items[PAUSE_COUNT] = { "CONTINUE", "MOVE LIST", dummy, "CPU LEVEL: ", "MAIN MENU" };
+    const char *const items[PAUSE_COUNT] = { "CONTINUE", "MOVE LIST", "CODES (NOT TESTED)", dummy, "CPU LEVEL: ", "MAIN MENU" };
     text_c(ov, F_BIG, 90, "PAUSE", C_ITEM, 255);
     int y = 120, a = fade_in();
     for (int i = 0; i < PAUSE_COUNT; i++) {
