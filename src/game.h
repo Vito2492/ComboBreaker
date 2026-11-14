@@ -96,12 +96,19 @@ typedef struct {
     // by that place: directions relative to the way it faces (F, B, D, U,
     // DF...), then P or K.
     uint32_t fighter_combo, fighter_strength, fighter_slot;
+    // per fighter: shadow moves left from its last combo breaker (3, one
+    // used by each; the arcade flashes a line at the end of the health bar)
+    uint32_t fighter_shadow;
     const char *breakers[11];
     // A combo each fighter can do on any other, for the training dummy to
     // break: from this far (pixels between the fighters), "C" (back for 40
     // frames, then forward) or "Q" (down, down-forward, forward), the
     // opening button (HQ HM HF LQ LM LF), and the button repeated after it.
     const char *combos[11];
+    // Each fighter's moves for the console menu's MOVE LIST, by the same
+    // place: "NAME|INPUT" lines, '#' for headings
+    const char *const *moves;
+    const char *fighter_names[11];   // by the same place, for the menus
 
     // Operator adjustments on the disk: adj_len bytes at adj_data, the first
     // set once they were edited, with the game's checksum of them at adj_sum.

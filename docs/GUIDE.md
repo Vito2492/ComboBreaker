@@ -118,6 +118,10 @@ and Backspace.
     them for you); the other changes apply at once.
 
   The same setting is in F1 > Practice, beside the recorded dummy.
+
+  After a combo breaker, **SHADOW** flashes at the top with one mark per
+  shadow move left (three; the arcade flashes a line at the end of the
+  health bar, which Practice doesn't show).
 - **Options:** difficulty (one to five stars), fixed difficulty, random
   select, timer, blood, finishing moves, and the controls table to remap
   each player's buttons. The arcade game gets harder fight by fight; with
@@ -129,7 +133,9 @@ and Backspace.
 
 ### Pause
 
-Start pauses any fight in these modes: continue, or back to the main menu.
+Start pauses any fight in these modes: continue, **MOVE LIST** (every
+special, shadow and finishing move of your fighter, with the combo
+breaker; up and down scroll it), or back to the main menu.
 
 ### The Super Nintendo codes
 

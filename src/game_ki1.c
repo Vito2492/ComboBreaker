@@ -2,6 +2,227 @@
 // 0, which turns the features using them off.
 #include "game.h"
 
+// Each fighter's moves for the console menu's MOVE LIST, by the fighter's
+// place on the character screen. From a published move list of the Super
+// Nintendo version; the arcade's are the same as far as tested (every
+// combo breaker here was checked against the arcade game).
+//
+// One line per move, "NAME|INPUT"; a line starting with '#' is a heading.
+// F toward the opponent, B away, D down, U up. QCF D,DF,F; QCB D,DB,B;
+// HCF B,DB,D,DF,F; HCB F,DF,D,DB,B. CB,F: hold back a second, then
+// forward. QP MP FP quick, medium, fierce punch; QK MK FK the kicks; P or
+// K any strength. H: hold the button, R: let it go.
+
+static const char *const ki1_moves[11] = {
+    // T. J. Combo
+    "#SPECIAL MOVES\n"
+    "Single backfist|CB,F+QP\n"
+    "Double backfist|CF,B+QP\n"
+    "Triple backfist|CF,B+QP,QP\n"
+    "Double roll punch|CB,F+MP\n"
+    "Triple roll punch|CB (2 S),F+MP\n"
+    "Lunging punch|CB,F+FP\n"
+    "Winding uppercut|H FP 2 S,R FP,FP\n"
+    "Flying knee|CB,F+QK/FK\n"
+    "Rising knee|CB,F+MK\n"
+    "Punching bag|QP,QP,QP... CLOSE\n"
+    "#SHADOW MOVES (AFTER A BREAKER)\n"
+    "Shadow lunging punch|H FP,CB,F+R FP\n"
+    "#COMBO BREAKER\n"
+    "Combo breaker|B,F+K\n"
+    "#FINISHING MOVES\n"
+    "Neck breaker|B,F,F+MP CLOSE\n"
+    "Screen punch|HCF+FK CLOSE\n"
+    "Humiliation|D,D,D+QP\n"
+    "Ultimate|HCB+MK IN A COMBO\n"
+    "Ultra combo|CF,B+FP IN A COMBO\n",
+    // Jago
+    "#SPECIAL MOVES\n"
+    "Green fireball|QCF+P\n"
+    "Yellow fireball|H QP,QCF+R QP\n"
+    "Flying uppercut|F,QCF+P\n"
+    "Sliding uppercut|CF,QCF+P\n"
+    "Green sword|DF,D,DB+FP\n"
+    "Flying heel kick|DB,D,DF+QK\n"
+    "Flying heel kick|DF,D,DB+K\n"
+    "Fast flying kick|H MK,DF,D,DB+R MK\n"
+    "Fast flying kick|H FK,DF,D,DB+R FK\n"
+    "#SHADOW MOVES (AFTER A BREAKER)\n"
+    "Fast red fireball|H FP,QCF+R FP\n"
+    "Shadow fast heel kick|H FK,DF,D,DB+R FK\n"
+    "#COMBO BREAKER\n"
+    "Combo breaker|F,QCF+P\n"
+    "#FINISHING MOVES\n"
+    "Sword stab|B,F,F+QP CLOSE\n"
+    "Falling car|B,B,F,F+MP\n"
+    "Humiliation|HCB+MK\n"
+    "Ultimate|HCF+FP IN A COMBO\n"
+    "Ultra combo|DF,D,DB+QK IN A COMBO\n",
+    // Thunder
+    "#SPECIAL MOVES\n"
+    "Flying mohawk|QCB+QP/MP OR HCB+FP\n"
+    "Spinning chop|CB,F+P OR CF,B+MP\n"
+    "Tomahawk dive|QCB+FP IN THE AIR\n"
+    "Phoenix throw|QCF+K\n"
+    "Fast phoenix|H MK,QCF+R MK\n"
+    "#SHADOW MOVES (AFTER A BREAKER)\n"
+    "Shadow tomahawk dive|H FP,HCB+R FP IN THE AIR\n"
+    "Giant red phoenix|QCF+MK\n"
+    "Small red phoenix|H MK,QCF+R MK\n"
+    "#COMBO BREAKER\n"
+    "Combo breaker|QCB+P\n"
+    "#FINISHING MOVES\n"
+    "Rain dance|HCF+FP\n"
+    "Axe uppercut|HCB+FK CLOSE\n"
+    "Humiliation|D,F,F+QK\n"
+    "Ultimate|DF,D,DB+MP IN A COMBO\n"
+    "Ultra combo|B,F+QP IN A COMBO\n",
+    // Glacius
+    "#SPECIAL MOVES\n"
+    "Blade uppercut|DF,D,DB+QP\n"
+    "Shoulder charge|CB,F+P\n"
+    "Double charge|CB,F+QP\n"
+    "Bouncing iceball|QCF+P\n"
+    "Puddle teleport|QCF+QK\n"
+    "Puddle uppercut|QCF+MK/FK\n"
+    "#SHADOW MOVES (AFTER A BREAKER)\n"
+    "Fast bouncing iceball|H QP,QCF+R QP\n"
+    "#COMBO BREAKER\n"
+    "Combo breaker|B,F+P\n"
+    "#FINISHING MOVES\n"
+    "Blob engulf|HCB+MK\n"
+    "Needle freeze|HCF+MP\n"
+    "Acid puddle|B,B,B+FK\n"
+    "Humiliation|F,F,B+QK\n"
+    "Ultimate|HCB+QP IN A COMBO\n"
+    "Ultra combo|B,F+FP IN A COMBO\n",
+    // B. Orchid
+    "#SPECIAL MOVES\n"
+    "Sabre charge|DF,D,DB+QP/MP\n"
+    "Swinging sabres|DF,D,DB+FP\n"
+    "Tiger charge|CB,F+P\n"
+    "Laser boomerang|QCF+P\n"
+    "Helicopter kick|CB,F+K\n"
+    "#SHADOW MOVES (AFTER A BREAKER)\n"
+    "Shadow sabre charge|DF,D,DB+MP\n"
+    "Shadow tiger charge|H FP,CB,F+R FP\n"
+    "#COMBO BREAKER\n"
+    "Combo breaker|B,F+K\n"
+    "#FINISHING MOVES\n"
+    "Frog squash|D,F,B+QK... FK CLOSE\n"
+    "Heart attack|B,F,F+QP\n"
+    "Humiliation|HCB+FP\n"
+    "Ultimate|HCB+MK IN A COMBO\n"
+    "Ultra combo|B,F+MP IN A COMBO\n",
+    // Cinder
+    "#SPECIAL MOVES\n"
+    "Flaming palm|B,B+QP\n"
+    "Red outline|HCB+MP\n"
+    "Invisibility|HCB+FP\n"
+    "Flame torpedo|F,F+P OR CB,F+P\n"
+    "Flame stream|F,F+K OR CB,F+K\n"
+    "Flip kick|F,QCF+K\n"
+    "#SHADOW MOVES (AFTER A BREAKER)\n"
+    "Shadow flame torpedo|H MP,F,F+R MP\n"
+    "Invisible teleport front|HCB+QP\n"
+    "Invisible teleport back|H QP,HCB+R QP\n"
+    "#COMBO BREAKER\n"
+    "Combo breaker|F,QCF+K\n"
+    "#FINISHING MOVES\n"
+    "Lava pool|B,B,B+MP\n"
+    "Meltdown|HCF+QK\n"
+    "Humiliation|B,B,B+FK\n"
+    "Ultimate|HCB+MK IN A COMBO\n"
+    "Ultra combo|F,F+FP IN A COMBO\n",
+    // Sabrewulf
+    "#SPECIAL MOVES\n"
+    "Flaming bat|QCB+P\n"
+    "Spinning claw|CB,F+P OR CF,B+MP\n"
+    "Rolling claw|CB,F+QK\n"
+    "Charging claw|CB,F+MK\n"
+    "Leaping claw|CB,F+FK\n"
+    "Energy howl|DF,D,DB+FK STARTS SHADOW\n"
+    "#SHADOW MOVES (AFTER A BREAKER)\n"
+    "Double spinning claw|CB,F+P\n"
+    "Double rolling claw|CB,F+QK\n"
+    "Long leaping claw|CB,F+FK\n"
+    "#COMBO BREAKER\n"
+    "Combo breaker|B,F+K\n"
+    "#FINISHING MOVES\n"
+    "Claw stab|B,B+MK CLOSE\n"
+    "Screen punch|B,B,F+MP\n"
+    "Humiliation|F,F+QP\n"
+    "Ultimate|HCF+FP IN A COMBO\n"
+    "Ultra combo|F,B+QK IN A COMBO\n",
+    // Riptor
+    "#SPECIAL MOVES\n"
+    "Claw uppercut|DF,D,DB+QP\n"
+    "Charge attack|CB,F+P\n"
+    "Fireball|QCB+P\n"
+    "Air fireball|QCB+FP IN THE AIR\n"
+    "Flame jet|DF,D,DB+FP\n"
+    "Leaping kick|CB,F+K OR HCF+QK\n"
+    "Tail flip|DF,D,DB+K\n"
+    "Air tail flip|DF,D,DB+FK IN THE AIR\n"
+    "#SHADOW MOVES (AFTER A BREAKER)\n"
+    "Fast leaping kick|H FK,CB,F+R FK\n"
+    "Fast purple fireball|H MP,QCB+R MP\n"
+    "#COMBO BREAKER\n"
+    "Combo breaker|B,F+K\n"
+    "#FINISHING MOVES\n"
+    "Eat opponent|HCF+MP\n"
+    "Acid spit|B,B,B+MK\n"
+    "Tail stab|F,F,B+FK\n"
+    "Humiliation|D,D,F,F+FP\n"
+    "Ultimate|HCF+QP IN A COMBO\n"
+    "Ultra combo|B,F+QK IN A COMBO\n",
+    // Spinal
+    "#SPECIAL MOVES\n"
+    "Absorb shield|B+H QP\n"
+    "Shield charge|F,F+P\n"
+    "Teleport front|D,D+P\n"
+    "Teleport behind|D,D+K\n"
+    "Flaming sword|CB,F+MP OR CF,B+MP\n"
+    "Slide|DB,D,DF+FK\n"
+    "#SHADOW MOVES (AFTER A BREAKER)\n"
+    "Flaming skull|QCF+P\n"
+    "Double flaming sword|CB,F+MP\n"
+    "Fast red fireball|H P,QCF+R P\n"
+    "Two flaming skulls|H QP,QCF+MP+R QP\n"
+    "#COMBO BREAKER\n"
+    "Combo breaker|F,F+P OR D,D+K\n"
+    "#FINISHING MOVES\n"
+    "Skeleton grab|B,B,B+MK\n"
+    "Shield stab|B,B,F+QK CLOSE\n"
+    "Humiliation|HCF+FK\n"
+    "Ultimate|DF,D,DB+QP IN A COMBO\n"
+    "Ultra combo|HCF+FP IN A COMBO\n",
+    // Fulgore
+    "#SPECIAL MOVES\n"
+    "Flying uppercut|F,QCF+P\n"
+    "Energy bolt|QCF+P\n"
+    "Two energy bolts|B,B,QCF+QP\n"
+    "Three energy bolts|F,B,B,QCF+QP\n"
+    "Reflect shield|QCB+P\n"
+    "Teleport front|B,QCB+P\n"
+    "Teleport behind|B,QCB+K\n"
+    "Claw charge|CB,F+K\n"
+    "Eye laser|DF,D,DB+FK\n"
+    "#SHADOW MOVES (AFTER A BREAKER)\n"
+    "Three energy bolts|QCF+QP\n"
+    "Shadow flying uppercut|H FP,F,QCF+R FP\n"
+    "Shadow energy charge|H FK,CB,F+R FK\n"
+    "#COMBO BREAKER\n"
+    "Combo breaker|F,QCF+P\n"
+    "#FINISHING MOVES\n"
+    "Eye laser|HCB+FP\n"
+    "Machine gun|HCF+FK\n"
+    "Humiliation|HCF+MK\n"
+    "Ultimate|DF,D,DB+MP IN A COMBO\n"
+    "Ultra combo|F,QCF+QP IN A COMBO\n",
+    0,                                  // Eyedol
+};
+
 const game_t game_ki1 = {
     .id = "ki1",
     .title = "Killer Instinct",
@@ -57,6 +278,7 @@ const game_t game_ki1 = {
     // found by breaking combos in scripted fights: a quick breaks a medium,
     // a medium a fierce, a fierce a quick
     .fighter_combo = 0x8bc8d, .fighter_strength = 0x8bc62, .fighter_slot = 0x8f33b,
+    .fighter_shadow = 0x8bcbb,  // 3 after a breaker, down by one with each of T. J. Combo's shadow lunging punches
     .breakers = {
         "B DB D DF F K",    // Combo
         "F D DF P",         // Jago
@@ -70,6 +292,9 @@ const game_t game_ki1 = {
         "F D DF P",         // Fulgore
         0,                  // Eyedol
     },
+    .moves = ki1_moves,
+    .fighter_names = { "T. J. COMBO", "JAGO", "CHIEF THUNDER", "GLACIUS", "B. ORCHID", "CINDER",
+                       "SABREWULF", "RIPTOR", "SPINAL", "FULGORE", "EYEDOL" },
     .combos = {             // found the same way, each tried on T. J. Combo
         "59 C LQ LM", "51 Q HF HM", "57 C HQ HM", "56 C HQ HM", "53 C LM HM",
         "58 C HM LM", "64 C HM HM", "98 C HM HQ", "76 Q HQ HM", "63 C LQ HM", 0,

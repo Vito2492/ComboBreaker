@@ -124,6 +124,10 @@ Enter elige y Retroceso vuelve.
     programa los elige solo); los demás cambios se aplican al instante.
 
   La misma opción está en F1 > Practice, junto al rival grabado.
+
+  Después de un combo breaker, arriba parpadea **SHADOW** con una marca por
+  cada movimiento shadow que te queda (son tres; el arcade lo muestra con una
+  rayita al final de la barra de vida, que en Practice no se ve).
 - **Options:** dificultad (de una a cinco estrellas), dificultad fija,
   personaje al azar, reloj, sangre, finishing moves, y la tabla de controles
   para cambiar los botones de cada jugador. En el arcade la máquina se pone
@@ -137,7 +141,9 @@ Enter elige y Retroceso vuelve.
 ### Pausa
 
 En cualquier momento de una pelea de estos modos, **Start** pausa. Desde la
-pausa puedes seguir o volver al menú principal.
+pausa puedes seguir, ver la **MOVE LIST** (todos los movimientos especiales,
+shadow y finales de tu personaje, con su combo breaker; se recorre con arriba y
+abajo) o volver al menú principal.
 
 ### Los códigos de la Super Nintendo
 
