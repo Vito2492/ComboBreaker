@@ -135,7 +135,10 @@ and Backspace.
 
 Start pauses any fight in these modes: continue, **MOVE LIST** (every
 special, shadow and finishing move of your fighter, with the combo
-breaker; up and down scroll it), or back to the main menu.
+breaker, what each needs, and at the end what the shorthand means with
+arrows and your own buttons; up and down scroll it), **CODES (NOT TESTED)**
+(the stage, VS screen and other codes from a published list), or back to
+the main menu.
 
 ### The Super Nintendo codes
 

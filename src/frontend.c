@@ -958,6 +958,13 @@ unsigned frontend_menu_buttons(void)
     return m;
 }
 
+const char *frontend_button_name(int player, int button)
+{
+    if (player < 0 || player > 1 || button < 0 || button >= NBUTTONS) return "?";
+    if (player < MAX_PADS && pads[player]) return pad_button_name(pads[player], cfg.pad_family[player], cfg.pad[button]);
+    return cfg.keys[player][button] ? SDL_GetScancodeName(cfg.keys[player][button]) : "-";
+}
+
 static void start_join(void)
 {
     if (!*cfg.net_address) { osd_message("Enter the host's address first"); return; }

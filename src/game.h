@@ -106,8 +106,9 @@ typedef struct {
     // opening button (HQ HM HF LQ LM LF), and the button repeated after it.
     const char *combos[11];
     // Each fighter's moves for the console menu's MOVE LIST, by the same
-    // place: "NAME|INPUT" lines, '#' for headings
+    // place: "NAME|INPUT" lines, '#' for headings, '!' for notes
     const char *const *moves;
+    const char *codes;              // the CODES page, the same way
     const char *fighter_names[11];   // by the same place, for the menus
 
     // Operator adjustments on the disk: adj_len bytes at adj_data, the first

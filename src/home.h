@@ -46,3 +46,6 @@ uint64_t frontend_frames(void);         // frames emulated since the machine was
 // keyboard's menu keys: the home menu's controls never follow game remaps.
 enum { MB_A = 1, MB_B = 2, MB_X = 4, MB_Y = 8, MB_SELECT = 16 };
 unsigned frontend_menu_buttons(void);
+// The name of what player 1 or 2 presses for one of the six game buttons
+// (the pad's button as labelled on it, or the key without a pad).
+const char *frontend_button_name(int player, int button);

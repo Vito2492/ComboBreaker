@@ -142,8 +142,11 @@ Enter elige y Retroceso vuelve.
 
 En cualquier momento de una pelea de estos modos, **Start** pausa. Desde la
 pausa puedes seguir, ver la **MOVE LIST** (todos los movimientos especiales,
-shadow y finales de tu personaje, con su combo breaker; se recorre con arriba y
-abajo) o volver al menú principal.
+shadow y finales de tu personaje, con su combo breaker, lo que pide cada uno, y
+al final qué significa cada abreviatura, con flechas y tus propios botones; se
+recorre con arriba y abajo), ver **CODES (NOT TESTED)** (los códigos de
+escenario, de la pantalla VS y otros, de una lista publicada) o volver al menú
+principal.
 
 ### Los códigos de la Super Nintendo
 

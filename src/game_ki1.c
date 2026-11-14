@@ -13,6 +13,15 @@
 // forward. QP MP FP quick, medium, fierce punch; QK MK FK the kicks; P or
 // K any strength. H: hold the button, R: let it go.
 
+// What the finishing moves need, under each fighter's heading.
+#define FINISH_NOTES \
+    "!NO MERCY: AFTER THE 2ND KNOCKOUT,\n" \
+    "!  AT THE DISTANCE SHOWN\n" \
+    "!HUMILIATION: THE SAME, IF YOU\n" \
+    "!  STILL HAVE YOUR FIRST BAR\n" \
+    "!ULTIMATE, ULTRA: IN A COMBO,\n" \
+    "!  2+ HITS, FOE'S BAR FLASHING RED\n"
+
 static const char *const ki1_moves[11] = {
     // T. J. Combo
     "#SPECIAL MOVES\n"
@@ -30,7 +39,7 @@ static const char *const ki1_moves[11] = {
     "Shadow lunging punch|H FP,CB,F+R FP\n"
     "#COMBO BREAKER\n"
     "Combo breaker|B,F+K\n"
-    "#FINISHING MOVES\n"
+    "#FINISHING MOVES\n" FINISH_NOTES
     "Neck breaker|B,F,F+MP CLOSE\n"
     "Screen punch|HCF+FK CLOSE\n"
     "Humiliation|D,D,D+QP\n"
@@ -52,9 +61,9 @@ static const char *const ki1_moves[11] = {
     "Shadow fast heel kick|H FK,DF,D,DB+R FK\n"
     "#COMBO BREAKER\n"
     "Combo breaker|F,QCF+P\n"
-    "#FINISHING MOVES\n"
+    "#FINISHING MOVES\n" FINISH_NOTES
     "Sword stab|B,F,F+QP CLOSE\n"
-    "Falling car|B,B,F,F+MP\n"
+    "Falling car|B,B,F,F+MP 3 AWAY\n"
     "Humiliation|HCB+MK\n"
     "Ultimate|HCF+FP IN A COMBO\n"
     "Ultra combo|DF,D,DB+QK IN A COMBO\n",
@@ -71,8 +80,8 @@ static const char *const ki1_moves[11] = {
     "Small red phoenix|H MK,QCF+R MK\n"
     "#COMBO BREAKER\n"
     "Combo breaker|QCB+P\n"
-    "#FINISHING MOVES\n"
-    "Rain dance|HCF+FP\n"
+    "#FINISHING MOVES\n" FINISH_NOTES
+    "Rain dance|HCF+FP 2 AWAY\n"
     "Axe uppercut|HCB+FK CLOSE\n"
     "Humiliation|D,F,F+QK\n"
     "Ultimate|DF,D,DB+MP IN A COMBO\n"
@@ -89,10 +98,10 @@ static const char *const ki1_moves[11] = {
     "Fast bouncing iceball|H QP,QCF+R QP\n"
     "#COMBO BREAKER\n"
     "Combo breaker|B,F+P\n"
-    "#FINISHING MOVES\n"
-    "Blob engulf|HCB+MK\n"
-    "Needle freeze|HCF+MP\n"
-    "Acid puddle|B,B,B+FK\n"
+    "#FINISHING MOVES\n" FINISH_NOTES
+    "Blob engulf|HCB+MK 1 AWAY\n"
+    "Needle freeze|HCF+MP 1 AWAY\n"
+    "Acid puddle|B,B,B+FK 1 AWAY\n"
     "Humiliation|F,F,B+QK\n"
     "Ultimate|HCB+QP IN A COMBO\n"
     "Ultra combo|B,F+FP IN A COMBO\n",
@@ -108,9 +117,9 @@ static const char *const ki1_moves[11] = {
     "Shadow tiger charge|H FP,CB,F+R FP\n"
     "#COMBO BREAKER\n"
     "Combo breaker|B,F+K\n"
-    "#FINISHING MOVES\n"
+    "#FINISHING MOVES\n" FINISH_NOTES
     "Frog squash|D,F,B+QK... FK CLOSE\n"
-    "Heart attack|B,F,F+QP\n"
+    "Heart attack|B,F,F+QP 1 AWAY\n"
     "Humiliation|HCB+FP\n"
     "Ultimate|HCB+MK IN A COMBO\n"
     "Ultra combo|B,F+MP IN A COMBO\n",
@@ -128,9 +137,9 @@ static const char *const ki1_moves[11] = {
     "Invisible teleport back|H QP,HCB+R QP\n"
     "#COMBO BREAKER\n"
     "Combo breaker|F,QCF+K\n"
-    "#FINISHING MOVES\n"
-    "Lava pool|B,B,B+MP\n"
-    "Meltdown|HCF+QK\n"
+    "#FINISHING MOVES\n" FINISH_NOTES
+    "Lava pool|B,B,B+MP 2 AWAY\n"
+    "Meltdown|HCF+QK 2 AWAY\n"
     "Humiliation|B,B,B+FK\n"
     "Ultimate|HCB+MK IN A COMBO\n"
     "Ultra combo|F,F+FP IN A COMBO\n",
@@ -148,9 +157,9 @@ static const char *const ki1_moves[11] = {
     "Long leaping claw|CB,F+FK\n"
     "#COMBO BREAKER\n"
     "Combo breaker|B,F+K\n"
-    "#FINISHING MOVES\n"
+    "#FINISHING MOVES\n" FINISH_NOTES
     "Claw stab|B,B+MK CLOSE\n"
-    "Screen punch|B,B,F+MP\n"
+    "Screen punch|B,B,F+MP 2 AWAY\n"
     "Humiliation|F,F+QP\n"
     "Ultimate|HCF+FP IN A COMBO\n"
     "Ultra combo|F,B+QK IN A COMBO\n",
@@ -169,9 +178,9 @@ static const char *const ki1_moves[11] = {
     "Fast purple fireball|H MP,QCB+R MP\n"
     "#COMBO BREAKER\n"
     "Combo breaker|B,F+K\n"
-    "#FINISHING MOVES\n"
-    "Eat opponent|HCF+MP\n"
-    "Acid spit|B,B,B+MK\n"
+    "#FINISHING MOVES\n" FINISH_NOTES
+    "Eat opponent|HCF+MP 2 AWAY\n"
+    "Acid spit|B,B,B+MK 2 AWAY\n"
     "Tail stab|F,F,B+FK\n"
     "Humiliation|D,D,F,F+FP\n"
     "Ultimate|HCF+QP IN A COMBO\n"
@@ -191,9 +200,9 @@ static const char *const ki1_moves[11] = {
     "Two flaming skulls|H QP,QCF+MP+R QP\n"
     "#COMBO BREAKER\n"
     "Combo breaker|F,F+P OR D,D+K\n"
-    "#FINISHING MOVES\n"
-    "Skeleton grab|B,B,B+MK\n"
-    "Shield stab|B,B,F+QK CLOSE\n"
+    "#FINISHING MOVES\n" FINISH_NOTES
+    "Skeleton grab|B,B,B+MK 1 AWAY\n"
+    "Shield stab|B,B,F+QK 1 AWAY\n"
     "Humiliation|HCF+FK\n"
     "Ultimate|DF,D,DB+QP IN A COMBO\n"
     "Ultra combo|HCF+FP IN A COMBO\n",
@@ -214,14 +223,43 @@ static const char *const ki1_moves[11] = {
     "Shadow energy charge|H FK,CB,F+R FK\n"
     "#COMBO BREAKER\n"
     "Combo breaker|F,QCF+P\n"
-    "#FINISHING MOVES\n"
-    "Eye laser|HCB+FP\n"
-    "Machine gun|HCF+FK\n"
+    "#FINISHING MOVES\n" FINISH_NOTES
+    "Eye laser|HCB+FP 2 AWAY\n"
+    "Machine gun|HCF+FK 2 AWAY\n"
     "Humiliation|HCF+MK\n"
     "Ultimate|DF,D,DB+MP IN A COMBO\n"
     "Ultra combo|F,QCF+QP IN A COMBO\n",
     0,                                  // Eyedol
 };
+
+// The CODES page, from a published move list (not tested here).
+static const char ki1_codes[] =
+    "#CHARACTER SCREEN\n"
+    "Random fighter|U+START\n"
+    "Other colours|HOLD U OR D, PICK\n"
+    "#STAGE: HOLD THE DIRECTION, PICK\n"
+    "Riptor's stage|D+MP\n"
+    "Thunder's stage|D+QP\n"
+    "Eyedol's stage|D+FP\n"
+    "Fulgore's stage|D+FK\n"
+    "Chicago alleyway|D+QK\n"
+    "Sabrewulf's stage|D+MK\n"
+    "Ice temple|U+QP\n"
+    "Cave|U+MP\n"
+    "Orchid's stage|U+MK\n"
+    "Ice shrine|U+FP\n"
+    "Cinder's stage|U+FK\n"
+    "Castle roof|U+QK\n"
+    "Sky platform|D+MK, BOTH PLAYERS\n"
+    "#VS SCREEN\n"
+    "Easy combo breakers|HOLD D, START\n"
+    "!  BREAKERS WITH ANY STRENGTH; THE\n"
+    "!  ANNOUNCER SAYS COMBO BREAKER\n"
+    "Hyper mode (faster)|HOLD F+QP+MP+FP\n"
+    "!  UNTIL A SWOOSH AT THE END\n"
+    "Play as Eyedol|PICK CINDER, THEN\n"
+    "|HOLD F, QP QK FP MK MP FK\n"
+    "!2 PLAYERS: BOTH ENTER VS CODES\n";
 
 const game_t game_ki1 = {
     .id = "ki1",
@@ -293,6 +331,7 @@ const game_t game_ki1 = {
         0,                  // Eyedol
     },
     .moves = ki1_moves,
+    .codes = ki1_codes,
     .fighter_names = { "T. J. COMBO", "JAGO", "CHIEF THUNDER", "GLACIUS", "B. ORCHID", "CINDER",
                        "SABREWULF", "RIPTOR", "SPINAL", "FULGORE", "EYEDOL" },
     .combos = {             // found the same way, each tried on T. J. Combo
