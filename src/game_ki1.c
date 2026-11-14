@@ -234,6 +234,9 @@ static const char *const ki1_moves[11] = {
 
 // The CODES page, from a published move list (not tested here).
 static const char ki1_codes[] =
+    "!NOT TESTED, AND NOT PLANNED TO BE.\n"
+    "!IF ONE BREAKS SOMETHING, RESTART\n"
+    "!THE GAME (F1 > RESET GAME).\n"
     "#CHARACTER SCREEN\n"
     "Random fighter|U+START\n"
     "Other colours|HOLD U OR D, PICK\n"
@@ -254,7 +257,9 @@ static const char ki1_codes[] =
     "#VS SCREEN\n"
     "Easy combo breakers|HOLD D, START\n"
     "!  BREAKERS WITH ANY STRENGTH; THE\n"
-    "!  ANNOUNCER SAYS COMBO BREAKER\n"
+    "!  ANNOUNCER SAYS COMBO BREAKER.\n"
+    "!  OPTIONS' EASY COMBO BREAKER IS\n"
+    "!  ANOTHER THING: BEST NOT BOTH\n"
     "Hyper mode (faster)|HOLD F+QP+MP+FP\n"
     "!  UNTIL A SWOOSH AT THE END\n"
     "Play as Eyedol|PICK CINDER, THEN\n"
