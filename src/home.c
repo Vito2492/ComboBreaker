@@ -113,6 +113,13 @@ static void text_c(uint32_t *ov, int f, int y, const char *s, uint32_t rgb, int 
 
 static int flag(uint32_t off) { return off ? ram2[off] : -1; }
 static bool in_attract(void) { return flag(game.attract) == 1; }
+// The arcade's title screen: its counter runs while it shows. The high-score
+// tables after the attract loop are not the attract loop either, but their
+// counter is 0.
+static bool on_title(void)
+{
+    return !in_attract() && (!game.title_timer || (ram2[game.title_timer] | ram2[game.title_timer + 1] << 8) != 0);
+}
 static bool in_game(int p) { return flag(game.in_game + (uint32_t)p * game.player_step) == 1; }
 static bool picked(int p) { return flag(game.picked + (uint32_t)p * game.player_step) == 1; }
 static bool playing(void) { return in_game(0) || in_game(1); }
@@ -246,6 +253,9 @@ static void stage_frame(uint32_t held[2])
 /* Menu model                                                        */
 /* ---------------------------------------------------------------- */
 
+// A cursor on the character screen moved by the program (steer() below).
+typedef struct { int wait, last; bool left; } steer_t;
+
 enum { MODE_NONE, MODE_ARCADE, MODE_VS, MODE_TOURNAMENT, MODE_PRACTICE };
 enum { PAGE_CLOSED, PAGE_MAIN, PAGE_OPTIONS, PAGE_PAUSE, PAGE_ROSTER, PAGE_NEXT };
 enum { MAIN_ARCADE, MAIN_VS, MAIN_TOURNAMENT, MAIN_PRACTICE, MAIN_OPTIONS, MAIN_COUNT };
@@ -278,10 +288,8 @@ static struct {
     bool cpu;
     int cpu_step;               // 0 picking his own, 1 the CPU's, 2 picked
     uint8_t own, opp;
-    int cpu_wait;               // frames the cursor shows his fighter before it is picked
+    steer_t cpu_steer;          // the cursor going back to his fighter
     uint32_t cpu_button;        // the button that picked the CPU's, to pick his
-    int cpu_last;               // the cursor before the last step back, -1 none
-    bool cpu_dir;               // stepping back to the left
     int pause_dummy;            // the dummy as the pause panel was opened
     uint32_t prev[2];           // last frame's buttons, for presses
     unsigned mprev;             // last frame's menu buttons (frontend_menu_buttons)
@@ -459,23 +467,43 @@ static void hold_level(void)
 // pick is held back and kept, the cursor then chooses the CPU's fighter, and
 // with that pick the cursor goes back to the first and picks it. Every opponent of the game is the CPU's choice,
 // so the same fighter comes back if the fight ever ends.
+// Moving a cursor on the character screen to a fighter the way a player
+// would, a place at a time (the game moves it alone; setting it does not
+// take), then picking with a button.
+
+static void steer(steer_t *s, uint32_t *held, uint32_t cursor, uint8_t want, uint32_t button)
+{
+    const uint32_t attacks = (1u << BTN_START) - 1 - (0xfu << BTN_UP);
+    *held &= ~((0xfu << BTN_UP) | attacks);
+    if (s->wait > 0) s->wait--;
+    else if (ram2[cursor] != want) {
+        if (ram2[cursor] == s->last) s->left = !s->left;     // right goes no further
+        s->last = ram2[cursor];
+        *held |= 1u << (s->left ? BTN_LEFT : BTN_RIGHT);
+        s->wait = 12;
+    } else *held |= button;
+}
+
+// Practice changed to or from the CPU: the same two fighters are picked
+// again for the other kind of game, by the program.
+static struct { bool on; uint8_t own, opp; steer_t s; int frames; } repick;
+
+static void repick_frame(uint32_t held[2])
+{
+    if (!repick.on || h.mode != MODE_PRACTICE || h.cpu || h.starting) return;
+    if (++repick.frames > 30 * 60) { repick.on = false; return; }
+    if (!in_game(0) || !in_game(1)) return;
+    if (!picked(0)) steer(&repick.s, &held[0], game.cursor, repick.own, 1u << BTN_HQ);
+    else if (!picked(1)) steer(&repick.s, &held[0], game.cursor + game.player_step, repick.opp, 1u << BTN_HQ);   // routed to player 2 below
+    else repick.on = false;
+}
+
 static void cpu_pick(uint32_t held[2], const uint32_t pressed[2])
 {
     const uint32_t attacks = (1u << BTN_START) - 1 - (0xfu << BTN_UP);
     if (h.cpu_step == 2) {
         for (uint32_t i = 0; i < 11; i++) poke(game.opponents + i, h.opp);
-        if (in_game(0) && !picked(0)) {             // until the game has taken it
-            held[0] &= ~((0xfu << BTN_UP) | attacks);
-            if (h.cpu_wait > 0) h.cpu_wait--;
-            else if (ram2[game.cursor] != h.own) {
-                // right, or left once right goes no further
-                if (ram2[game.cursor] == h.cpu_last) h.cpu_dir = !h.cpu_dir;
-                h.cpu_last = ram2[game.cursor];
-                held[0] |= 1u << (h.cpu_dir ? BTN_LEFT : BTN_RIGHT);
-                h.cpu_wait = 12;
-            }
-            else held[0] |= h.cpu_button;
-        }
+        if (in_game(0) && !picked(0)) steer(&h.cpu_steer, &held[0], game.cursor, h.own, h.cpu_button);   // until the game has taken it
         return;
     }
     if (!in_game(0) || picked(0)) return;
@@ -488,9 +516,7 @@ static void cpu_pick(uint32_t held[2], const uint32_t pressed[2])
         for (uint32_t i = 0; i < 11; i++) poke(game.opponents + i, h.opp);
         // the cursor goes back to his fighter, a place at a time as if
         // he moved it, and the same button picks it
-        h.cpu_wait = 6;
-        h.cpu_last = -1;
-        h.cpu_dir = false;
+        h.cpu_steer = (steer_t){ 6, -1, false };
         h.cpu_button = pressed[0] & attacks & (0u - (pressed[0] & attacks));
         h.cpu_step = 2;
         fprintf(stderr, "home: practice: player 1 fighter %d, CPU %d\n", h.own, h.opp);
@@ -667,6 +693,14 @@ static void start_mode(int mode)
     h.mode = mode;
     h.cpu = mode == MODE_PRACTICE && cfg.dummy == DUMMY_CPU && game.opponents && game.cursor;
     h.cpu_step = 0;
+    if (h.cpu && repick.on) {           // the same fighters again, against the CPU
+        repick.on = false;
+        h.own = repick.own;
+        h.opp = repick.opp;
+        h.cpu_steer = (steer_t){ 30, -1, false };
+        h.cpu_button = 1u << BTN_HQ;
+        h.cpu_step = 2;
+    }
     h.want_players = mode == MODE_ARCADE || h.cpu ? 1 : 2;
     training_forced = mode == MODE_PRACTICE;
     h.page = PAGE_CLOSED;
@@ -795,6 +829,11 @@ static void menu_frame(const uint32_t held[2])
             h.page = PAGE_CLOSED;
             // to or from the CPU: that is another kind of game, picked again
             if ((h.pause_dummy == DUMMY_CPU) != (cfg.dummy == DUMMY_CPU) && h.mode == MODE_PRACTICE) {
+                repick.on = game.fighter_slot && game.cursor;
+                repick.own = ram2[game.fighter_slot];
+                repick.opp = ram2[game.fighter_slot + game.player_step];
+                repick.s = (steer_t){ 30, -1, false };
+                repick.frames = 0;
                 h.again = MODE_PRACTICE;
                 h.restore = true;
             }
@@ -837,7 +876,7 @@ static void return_to_menu(void)
 // runs out; while the menu is open it is kept up, and its music with it.
 static void keep_title(void)
 {
-    if (!game.title_timer || in_attract() || playing()) return;
+    if (!game.title_timer || !on_title() || playing()) return;
     unsigned t = ram2[game.title_timer] | ram2[game.title_timer + 1] << 8;
     if (t < 300) { poke(game.title_timer, 500 & 255); poke(game.title_timer + 1, 500 >> 8); }
 }
@@ -885,7 +924,7 @@ void home_inputs(uint32_t held[2])
         // loop (fighter profiles, high scores, its music), as the SNES does;
         // Start there brings the menu back.
         if (h.page == PAGE_MAIN && (held[0] | held[1])) h.idle = 0;
-        if (h.page == PAGE_MAIN && ++h.idle > IDLE_ATTRACT && !in_attract() && game.title_timer) {
+        if (h.page == PAGE_MAIN && ++h.idle > IDLE_ATTRACT && on_title() && game.title_timer) {
             h.idle = 0;
             h.page = PAGE_CLOSED;
             h.menu_after_title = false;
@@ -897,7 +936,7 @@ void home_inputs(uint32_t held[2])
         }
         keep_title();
         if (h.cool > 0) h.cool--;
-        if (in_attract() && h.press == 0 && h.cool == 0) { h.press = 4; h.press_player = 0; h.cool = 40; }
+        if (!on_title() && h.press == 0 && h.cool == 0) { h.press = 4; h.press_player = 0; h.cool = 40; }
         menu_frame(held);
         held[0] = held[1] = 0;
         if (h.press > 0) { held[0] |= 1u << BTN_START; h.press--; }
@@ -928,7 +967,7 @@ void home_inputs(uint32_t held[2])
     // console menu instead of starting a game.
     if (!playing() && !h.starting) {
         if (h.mode != MODE_NONE) home_reset();          // a mode ended in game over
-        if (h.menu_after_title && !in_attract() && h.press == 0) {
+        if (h.menu_after_title && on_title() && h.press == 0) {
             // back from the attract loop the menu was left for: straight to it
             h.menu_after_title = false;
             open_page(PAGE_MAIN, h.main_sel);
@@ -942,7 +981,7 @@ void home_inputs(uint32_t held[2])
             h.press = 4; h.press_player = 0; h.cool = 40;
         } else if ((pressed[0] | pressed[1]) >> BTN_START & 1) {
             held[0] = held[1] = 0;
-            if (in_attract()) {
+            if (!on_title()) {                          // the attract loop or the high scores
                 h.menu_after_title = h.left_menu;
                 h.left_menu = false;
                 if (frontend_frames() < SOUND_READY) { h.title_wait = true; return; }
@@ -989,6 +1028,8 @@ void home_inputs(uint32_t held[2])
 
     if (h.mode == MODE_PRACTICE && h.cpu && !h.starting) cpu_pick(held, pressed);
     if (h.mode == MODE_PRACTICE && h.cpu && game.cpu_level) poke(game.cpu_level, (uint8_t)(practice_stars() * 10));
+
+    repick_frame(held);
 
     // Practice: player 1 picks both fighters, then the dummy stands still.
     if (h.mode == MODE_PRACTICE && in_game(1)) {
@@ -1121,7 +1162,7 @@ static void net_frame(uint32_t held[2])
 // The menu shows a few frames after the title was asked for: save it then.
 static void maybe_save_title(void)
 {
-    if (h.title_saved || (h.page != PAGE_MAIN && h.page != PAGE_ROSTER) || h.anim != 30 || in_attract() || playing()) return;
+    if (h.title_saved || (h.page != PAGE_MAIN && h.page != PAGE_ROSTER) || h.anim != 30 || !on_title() || playing()) return;
     char path[4200];
     title_state_path(path, sizeof path);
     h.title_saved = state_save_file(path);
@@ -1290,7 +1331,7 @@ static void draw_pause(uint32_t *ov)
         y += 16;
     }
     if (h.mode == MODE_PRACTICE && (h.sel == PAUSE_DUMMY || h.sel == PAUSE_LEVEL))
-        text_c(ov, F_SMALL, 222, h.sel == PAUSE_DUMMY && (cfg.dummy == DUMMY_CPU) != (h.pause_dummy == DUMMY_CPU) ? "FIGHTERS ARE PICKED AGAIN" : "LEFT/RIGHT: CHANGE", C_DIM, 255);
+        text_c(ov, F_SMALL, 222, h.sel == PAUSE_DUMMY && (cfg.dummy == DUMMY_CPU) != (h.pause_dummy == DUMMY_CPU) ? "THE FIGHT STARTS AGAIN" : "LEFT/RIGHT: CHANGE", C_DIM, 255);
 }
 
 // Practice as on the SNES: no health bars or clock, just its name. The

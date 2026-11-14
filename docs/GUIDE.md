@@ -114,7 +114,8 @@ and Backspace.
   - CPU: the game's own CPU fighter, which moves, attacks and does combos.
     **CPU LEVEL**, just below in the pause menu, sets how good it is (one to
     five stars, separate from the arcade's difficulty). Changing to or from
-    CPU takes you back to the character screen.
+    CPU starts the fight again with the same fighters (the program picks
+    them for you); the other changes apply at once.
 
   The same setting is in F1 > Practice, beside the recorded dummy.
 - **Options:** difficulty (one to five stars), fixed difficulty, random
