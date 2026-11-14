@@ -126,7 +126,7 @@ static uint32_t stance(void)
 // a fierce, a fierce a quick); pressed again in the same combo, it tries the
 // next strength. The game still decides, as if the move had been done by
 // hand. Players only, not the CPU.
-static struct { uint32_t seq[16]; int len, pos, tries; uint32_t prev; } brk[2];
+static struct { uint32_t seq[16]; int len, pos, tries, since_hit; uint32_t prev; uint8_t health; } brk[2];
 
 static int breaker_moves(int p, uint32_t seq[16])
 {
@@ -173,7 +173,12 @@ static void easy_breaker(uint32_t held[2])
         uint32_t raw = held[p], pressed = raw & ~brk[p].prev & attacks;
         brk[p].prev = raw;
         bool human = game.in_game && ram2[game.in_game + (uint32_t)p * game.player_step] == 1;
-        bool combo = human && game.fighter_combo && ram2[game.fighter_combo + (uint32_t)(1 - p) * HEALTH_STEP] >= 1;
+        // the combo count can stay up after a combo ends: only while hits
+        // are still landing (each well within this of the last)
+        uint8_t hl = ram2[HEALTH_P1 + (uint32_t)p * HEALTH_STEP];
+        brk[p].since_hit = hl < brk[p].health ? 0 : brk[p].since_hit < 1000 ? brk[p].since_hit + 1 : 1000;
+        brk[p].health = hl;
+        bool combo = human && game.fighter_combo && ram2[game.fighter_combo + (uint32_t)(1 - p) * HEALTH_STEP] >= 1 && brk[p].since_hit < 40;
         if (!combo) { brk[p].len = brk[p].tries = 0; continue; }
         if (brk[p].pos >= brk[p].len && pressed) {
             brk[p].len = breaker_moves(p, brk[p].seq);
