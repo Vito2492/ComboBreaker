@@ -1642,9 +1642,15 @@ int frontend_main(void)
         bool rewinding = cfg.rewind && !home_menu_open() && (key_held(HK_REWIND) || pad_held(cfg.pad_rewind));
 
         if (home_paused() && !menu_open) {
-            uint32_t held[2];
-            read_players(held);
-            home_inputs(held);              // the pause panel's navigation
+            // the pause panel's navigation, at the game's rate whatever the
+            // display's (its key repeat counts frames)
+            static uint32_t last_nav;
+            if (SDL_GetTicks() - last_nav >= 16) {
+                last_nav = SDL_GetTicks();
+                uint32_t held[2];
+                read_players(held);
+                home_inputs(held);
+            }
             present("");
             if (!vsync) SDL_Delay(16);
             next = SDL_GetPerformanceCounter();

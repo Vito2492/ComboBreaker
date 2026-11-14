@@ -690,6 +690,10 @@ int main(int argc, char **argv)
     main_argc = argc;
     main_argv = argv;
     game_select(&game_ki1);              // until one is chosen (the program's icon is UltraCombo's)
+    // Pads report buttons by position (SDL's A = south) on every brand. SDL's
+    // default for Nintendo-style pads is by printed label, which swaps A/B and
+    // X/Y against the bindings (a fierce kick came out medium).
+    SDL_SetHint(SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS, "0");
     // packaging helper: before anything writes a log or settings
     if (argc == 3 && !strcmp(argv[1], "--write-icon")) {
         size_t n = strlen(argv[2]);                     // .png: 256 pixels, else .ico

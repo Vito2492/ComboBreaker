@@ -49,8 +49,10 @@ void training_apply(bool real)
         // emptied, but never while a hit is landing: the game is then still
         // working on the health it took. The whole 16-bit health is written,
         // and the bar it shows with it, so there is nothing left to animate.
+        // Below a quarter, though, it refills at once: a long combo, or a
+        // dummy's combos back to back, would otherwise end the fight.
         int wait = training_forced ? 8 : REFILL_DELAY;
-        if (h && h < HEALTH_MAX && hp[p].still >= wait) {
+        if (h && h < HEALTH_MAX && (hp[p].still >= wait || h < HEALTH_MAX / 4)) {
             poke8(off, HEALTH_MAX);
             if (game.health_frac) {
                 uint32_t frac = game.health_frac + (uint32_t)p * HEALTH_STEP;

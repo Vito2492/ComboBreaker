@@ -120,7 +120,8 @@ Enter elige y Retroceso vuelve.
   - CPU: el luchador de la máquina, que se mueve, ataca y hace combos.
     **CPU LEVEL**, justo debajo en la pausa, elige qué tan bueno es (de una a
     cinco estrellas, aparte de la dificultad del arcade). Al pasar a CPU o
-    salir de CPU vuelves a la pantalla de personajes.
+    salir de CPU la pelea empieza de nuevo con los mismos personajes (el
+    programa los elige solo); los demás cambios se aplican al instante.
 
   La misma opción está en F1 > Practice, junto al rival grabado.
 - **Options:** dificultad (de una a cinco estrellas), dificultad fija,
