@@ -291,6 +291,7 @@ static struct {
     uint32_t cpu_button;        // the button that picked the CPU's, to pick his
     int pause_dummy;            // the dummy as the pause panel was opened
     int pause_player;           // who paused: whose MOVE LIST
+    int knocked;                // the last fighter out of health while the other had some, -1 none
     int list;                   // the pause panel shows a list: LIST_MOVES, LIST_CODES, or 0
     int list_top;               // its first line shown
     uint32_t prev[2];           // last frame's buttons, for presses
@@ -556,6 +557,7 @@ static int match_winner(void)
 {
     int r = game.match_result ? ram2[game.match_result] : 0;
     if (r == 1 || r == 2) return r - 1;
+    if (!game.match_result && h.knocked >= 0) return 1 - h.knocked;    // the last knockout
     return health_of(0) >= health_of(1) ? 0 : 1;
 }
 
@@ -610,6 +612,7 @@ static void open_page(int page, int sel)
 void home_reset(void)
 {
     h.live = false;
+    h.knocked = -1;
     stage_clear();
     tn.end.armed = false;
     h.vs_end.armed = false;
@@ -816,6 +819,20 @@ static void list_build(void)
         "~H|HOLD THE BUTTON\n~R|LET GO OF IT\n"
         "~CLOSE|NEXT TO THE FOE\n~2 AWAY|TWO FIGHTERS' WIDTH AWAY\n",
         b[0], b[1], b[2], b[3], b[4], b[5], b[0], b[1], b[2], b[3], b[4], b[5]);
+    // shorthand only some lists use
+    static const char *const extra[][2] = {
+        { "QCDF", "~QCDF|{DB}{D}{DF}\n" },
+        { "QCDB", "~QCDB|{DF}{D}{DB}\n" },
+        { "BLOCK", "~BLOCK|ONE BOX OF THE SUPER METER\n" },
+        { " BAR\n", "~BAR|THE SUPER METER:\n!1/4 BAR: 3 RED BOXES\n"
+                    "!1/2 BAR: FLASHING RED\n!FULL BAR: ALL OF IT\n" },
+        { "SKULL", "~SKULL|SPINAL'S SKULLS, UNDER HIS BAR\n" },
+    };
+    for (size_t i = 0; i < sizeof extra / sizeof extra[0]; i++) {
+        size_t len = strlen(list_buf);
+        if (body && strstr(body, extra[i][0]) && len < sizeof list_buf)
+            snprintf(list_buf + len, sizeof list_buf - len, "%s", extra[i][1]);
+    }
 }
 
 static int list_lines(void)
@@ -1100,6 +1117,10 @@ void home_inputs(uint32_t held[2])
     if (h.mode != MODE_PRACTICE) random_frame(held, pressed);
     if (h.mode == MODE_VS || h.mode == MODE_PRACTICE || h.mode == MODE_TOURNAMENT) stage_frame(held);
     if (h.mode == MODE_VS || h.mode == MODE_TOURNAMENT) match_log();
+    if (game.health_p1 && game.fight_scene && scene_up()) {          // for match_winner without the game's record
+        int h0 = health_of(0), h1 = health_of(1);
+        if (!h0 != !h1) h.knocked = h0 ? 1 : 0;
+    }
     if (h.mode == MODE_TOURNAMENT) tn_frame();
     if (h.mode == MODE_VS || h.mode == MODE_PRACTICE || h.mode == MODE_TOURNAMENT) music_frame();
     if (h.mode != MODE_NONE) speed_frame(held);

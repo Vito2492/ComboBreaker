@@ -920,6 +920,7 @@ void frontend_open_controls(void) { menu_open = true; go(PG_CONTROLS, 0); stop_a
 void frontend_reset_game(void) { hard_reset(); }
 void frontend_settings_changed(void) { menu_changed = true; }
 uint64_t frontend_frames(void) { return frame_count; }
+void frontend_count_frame(void) { frame_count++; }      // headless runs, which have no frontend loop
 
 // SNES places: A east, B south, X north, Y west. SDL names an Xbox layout
 // (A south); for Nintendo pads it may follow the printed labels instead.
