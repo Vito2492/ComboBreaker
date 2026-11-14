@@ -1,12 +1,13 @@
-// UltraCombo 2: Killer Instinct 2 (MAME kinst2). RAM locations are for the
-// L1.4 code and were found by diffing deterministic runs.
+// ComboBreaker 2: Killer Instinct 2 (MAME kinst2), on its way to the
+// console menus (branch ki2-gold). RAM locations are for the L1.4 code and
+// were found by diffing deterministic runs.
 #include "game.h"
 
 const game_t game_ki2 = {
     .id = "ki2",
     .title = "Killer Instinct 2",
-    .product = "UltraCombo 2",
-    .icon_text = "UC2",
+    .product = "ComboBreaker 2",
+    .icon_text = "CB2",
 
     .versions = { { "1.4", "ki2-l14.u98", 0x27d0285e } },
     .sound_roms = { "ki2_l1.u10", "ki2_l1.u11", "ki2_l1.u12", "ki2_l1.u13",
