@@ -37,5 +37,15 @@ const game_t game_ki2 = {
 
     // checksum of the 88 bytes after it, computed by the game at 0x8802d400;
     // +4 is set once the adjustments were edited
+    // The console menu (home.c), found the same way as UltraCombo's: the
+    // attract loop shows where 7ff29c is 0 (the title screen stays up once
+    // Start is pressed there; it has no countdown). Per player, 0x130 apart:
+    // in a game, picked a fighter.
+    .attract = 0x7ff29c, .attract_zero = true,
+    .in_game = 0x7ff148, .picked = 0x7ff149, .player_step = 0x130,
+    // the top byte of a pointer in player 1's fighter, there from the
+    // round's start through the winner's pose (not on the VS screen nor the
+    // victory screen); the continue screen after a match
+    .fight_scene = 0x7fc0d3, .after_match = 0x7ff136, .match_over = 0x7ff136,
     .adj_sum = 0xa00, .adj_data = 0xa04, .adj_len = 88, .adj_difficulty = 0xa1c,
 };

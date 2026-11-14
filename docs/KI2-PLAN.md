@@ -30,6 +30,14 @@ Same method as KI1: deterministic headless scripts, `KI2_DUMP_AT`,
 Already known for KI2: health 0x7fc105 (step 0x100), timer 0x7f7a10..12,
 credits 0x7ff124, the adjustments (difficulty) on the disk.
 
+Found (2026-11-14): attract 0x7ff29c (0 in the attract loop; the title
+stays once Start is pressed, no countdown), in_game 0x7ff148, picked
+0x7ff149, player_step 0x130, fight_scene 0x7fc0d3 (a pointer's top byte in
+player 1's fighter), after_match = match_over 0x7ff136 (continue screen),
+opponents 0x7ff428 (the one-player order, 11 bytes). No winner byte found
+yet: the one with more health is taken. With these the console menu opens
+on KI2, a one-player game starts from it and pauses.
+
 ## 2. Console menus (Killer Instinct Gold)
 
 To confirm from the manual and the game: main menu (Arcade, Team, Tournament,

@@ -113,7 +113,7 @@ static void text_c(uint32_t *ov, int f, int y, const char *s, uint32_t rgb, int 
 /* ---------------------------------------------------------------- */
 
 static int flag(uint32_t off) { return off ? ram2[off] : -1; }
-static bool in_attract(void) { return flag(game.attract) == 1; }
+static bool in_attract(void) { return flag(game.attract) == (game.attract_zero ? 0 : 1); }
 // The arcade's title screen: its counter runs while it shows. The high-score
 // tables after the attract loop are not the attract loop either, but their
 // counter is 0.
@@ -554,7 +554,7 @@ static bool match_ended(match_end_t *e)
 // on a draw the one with more health left.
 static int match_winner(void)
 {
-    int r = ram2[game.match_result];
+    int r = game.match_result ? ram2[game.match_result] : 0;
     if (r == 1 || r == 2) return r - 1;
     return health_of(0) >= health_of(1) ? 0 : 1;
 }
@@ -576,7 +576,7 @@ static void match_log(void)
 
 static void tn_frame(void)
 {
-    if (!game.match_result || !game.health_p1 || !match_ended(&tn.end)) return;
+    if (!game.health_p1 || !match_ended(&tn.end)) return;
     tn.won = match_winner();
     if (tn.qn >= 2) {
         int winner = tn.queue[tn.won], loser = tn.queue[tn.won ^ 1];

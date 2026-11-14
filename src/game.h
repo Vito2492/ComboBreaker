@@ -58,6 +58,7 @@ typedef struct {
     // For the console-style menu (home.c): 1 while the attract loop runs; per
     // player (player_step apart) 1 once in a game and once a fighter is picked.
     uint32_t attract, in_game, picked, player_step;
+    bool attract_zero;          // the attract flag is 0 while the attract loop runs instead
     // Stage choice: the game draws two-player stages from stage_pool (32
     // bytes) at random, never the one in stage_last; the result lands in stage.
     uint32_t stage_pool, stage_last, stage;
@@ -69,7 +70,7 @@ typedef struct {
     // the side that won a match: 1 player 1, 2 player 2, 0 a draw. Set when
     // the game decides it, which can be well before the match's end shows
     // (an ultimate combo); read it once fight_scene has gone.
-    uint32_t match_result;
+    uint32_t match_result;      // 0: not known; the one with more health won
     // non-zero while a fight's scene is up: from the round's start through
     // the winner's moment on the stage (finishing move, ultimate); zero from
     // the victory screen (supreme or awesome victory, perfect) if there is
