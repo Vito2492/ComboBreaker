@@ -32,12 +32,12 @@ jobs:
       - name: SDL2 for MinGW
         run: |
           mkdir -p deps/sdl2-mingw && cd deps/sdl2-mingw
-          curl -sSfL https://github.com/libsdl-org/SDL/releases/download/release-$SDL/SDL2-devel-$SDL-mingw.tar.gz | tar xz
+          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 https://github.com/libsdl-org/SDL/releases/download/release-$SDL/SDL2-devel-$SDL-mingw.tar.gz | tar xz
       - name: Build
         run: make -j4 ultracombo windows
       - name: Zig for Windows
         run: |
-          curl -sSfL -o zig.zip https://ziglang.org/download/$ZIG/zig-x86_64-windows-$ZIG.zip
+          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -o zig.zip https://ziglang.org/download/$ZIG/zig-x86_64-windows-$ZIG.zip
           unzip -q zig.zip && mv zig-x86_64-windows-$ZIG zig
       - name: Package
         run: |
@@ -68,7 +68,7 @@ jobs:
             libasound2-dev libpulse-dev libudev-dev libdbus-1-dev
       - name: SDL2 (the distribution's is too old)
         run: |
-          curl -sSfL https://github.com/libsdl-org/SDL/releases/download/release-$SDL/SDL2-$SDL.tar.gz | tar xz
+          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 https://github.com/libsdl-org/SDL/releases/download/release-$SDL/SDL2-$SDL.tar.gz | tar xz
           cmake -S SDL2-$SDL -B sdl-build -DCMAKE_BUILD_TYPE=Release -DSDL_STATIC=OFF -DSDL_TEST=OFF
           cmake --build sdl-build -j4 && sudo cmake --install sdl-build
       - name: Build
@@ -77,7 +77,7 @@ jobs:
           patchelf --set-rpath '$ORIGIN/lib' ultracombo
       - name: Zig for Linux
         run: |
-          curl -sSfL https://ziglang.org/download/$ZIG/zig-x86_64-linux-$ZIG.tar.xz | tar xJ
+          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 https://ziglang.org/download/$ZIG/zig-x86_64-linux-$ZIG.tar.xz | tar xJ
           mv zig-x86_64-linux-$ZIG zig
       - name: Package
         run: |
@@ -106,7 +106,7 @@ jobs:
         run: make -j4 CC=clang ultracombo
       - name: Zig for macOS
         run: |
-          curl -sSfL https://ziglang.org/download/$ZIG/zig-aarch64-macos-$ZIG.tar.xz | tar xJ
+          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 https://ziglang.org/download/$ZIG/zig-aarch64-macos-$ZIG.tar.xz | tar xJ
           mv zig-aarch64-macos-$ZIG zig
       - name: Package
         run: |
@@ -141,7 +141,7 @@ jobs:
       - name: Desktop program (draws the icon)
         run: make -j4 ultracombo
       - name: SDL2 sources
-        run: curl -sSfL https://github.com/libsdl-org/SDL/releases/download/release-$SDL/SDL2-$SDL.tar.gz | tar xz
+        run: curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 https://github.com/libsdl-org/SDL/releases/download/release-$SDL/SDL2-$SDL.tar.gz | tar xz
       - name: Prepare
         run: sh tools/android-prepare.sh SDL2-$SDL ./ultracombo
       - name: TinyCC for the phone (builds the game's code there, LGPL, loaded as libtcc.so)
