@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+#include <ctype.h>
 
 // The SNES pad's buttons, in the order of the cabinet's six: L Y X are
 // weak, medium, fierce punch and R B A weak, medium, fierce kick.
@@ -261,7 +262,7 @@ enum { PAGE_CLOSED, PAGE_MAIN, PAGE_OPTIONS, PAGE_PAUSE, PAGE_ROSTER, PAGE_NEXT 
 enum { MAIN_ARCADE, MAIN_VS, MAIN_TOURNAMENT, MAIN_PRACTICE, MAIN_OPTIONS, MAIN_COUNT };
 enum { OPT_DIFFICULTY, OPT_FIXED, OPT_RANDOM, OPT_TIMER, OPT_BLOOD, OPT_FINISH, OPT_BREAKER,
        OPT_WP, OPT_MP, OPT_FP, OPT_WK, OPT_MK, OPT_FK, OPT_RESET, OPT_EXIT, OPT_COUNT };
-enum { PAUSE_CONTINUE, PAUSE_DUMMY, PAUSE_LEVEL, PAUSE_MENU, PAUSE_COUNT };   // DUMMY: Practice only, LEVEL: against the CPU
+enum { PAUSE_CONTINUE, PAUSE_MOVES, PAUSE_DUMMY, PAUSE_LEVEL, PAUSE_MENU, PAUSE_COUNT };   // MOVES: in a fight, DUMMY: Practice only, LEVEL: against the CPU
 
 // as on the SNES title screen
 static const char *const main_items[MAIN_COUNT] = { "1 PLAYER GAME", "2 PLAYER GAME", "TOURNAMENT GAME", "PRACTICE GAME", "OPTIONS" };
@@ -291,6 +292,9 @@ static struct {
     steer_t cpu_steer;          // the cursor going back to his fighter
     uint32_t cpu_button;        // the button that picked the CPU's, to pick his
     int pause_dummy;            // the dummy as the pause panel was opened
+    int pause_player;           // who paused: whose MOVE LIST
+    bool moves_open;            // the pause panel shows the MOVE LIST
+    int moves_top;              // its first line shown
     uint32_t prev[2];           // last frame's buttons, for presses
     unsigned mprev;             // last frame's menu buttons (frontend_menu_buttons)
     int repeat, repeat_dir;     // held up/down auto-repeat
@@ -775,8 +779,26 @@ static int page_items(void)
 // Practice against the CPU: its level in stars, 10 to 50 of the game's 50
 static int practice_stars(void) { return cfg.practice_level < 1 ? 1 : cfg.practice_level > 5 ? 5 : cfg.practice_level; }
 
+// The MOVE LIST of the fighter of the player who paused, if known.
+static const char *moves_text(void)
+{
+    if (!game.moves || !game.fighter_slot || !fighting()) return NULL;
+    unsigned slot = ram2[game.fighter_slot + (uint32_t)h.pause_player * game.player_step];
+    return slot < 11 ? game.moves[slot] : NULL;
+}
+
+static int moves_lines(const char *m)
+{
+    int n = 0;
+    for (; m && *m; m++) n += *m == '\n';
+    return n;
+}
+
+#define MOVES_SHOWN 14
+
 static bool pause_shown(int item)
 {
+    if (item == PAUSE_MOVES) return moves_text() != NULL;
     if (item == PAUSE_DUMMY) return h.mode == MODE_PRACTICE;
     if (item == PAUSE_LEVEL) return h.mode == MODE_PRACTICE && cfg.dummy == DUMMY_CPU;
     return true;
@@ -798,8 +820,9 @@ static void menu_frame(const uint32_t held[2])
         return;
     }
     int n = page_items();
-    if (ud) h.sel = (h.sel + ud + n) % n;
-    if (ud && h.page == PAGE_PAUSE) while (!pause_shown(h.sel)) h.sel = (h.sel + ud + n) % n;
+    if (h.page == PAGE_PAUSE && h.moves_open) n = 0;           // the list scrolls instead
+    if (ud && n) h.sel = (h.sel + ud + n) % n;
+    if (ud && n && h.page == PAGE_PAUSE) while (!pause_shown(h.sel)) h.sel = (h.sel + ud + n) % n;
     if (h.page == PAGE_MAIN) {
         if (ok) choose(h.sel);
     } else if (h.page == PAGE_OPTIONS) {
@@ -816,8 +839,15 @@ static void menu_frame(const uint32_t held[2])
         if (lr) change_option(lr);
         else if (ok) change_option(0);
         else if (back) { h.sel = OPT_EXIT; change_option(0); }
+    } else if (h.page == PAGE_PAUSE && h.moves_open) {
+        int top = h.moves_top + ud, most = moves_lines(moves_text()) - MOVES_SHOWN;
+        h.moves_top = top < 0 ? 0 : top > most ? (most > 0 ? most : 0) : top;
+        if (back || ok) h.moves_open = false;
     } else if (h.page == PAGE_PAUSE) {
-        if (h.sel == PAUSE_LEVEL && (lr || ok)) {
+        if (h.sel == PAUSE_MOVES && ok) {
+            h.moves_open = true;
+            h.moves_top = 0;
+        } else if (h.sel == PAUSE_LEVEL && (lr || ok)) {
             int l = practice_stars() + (lr ? lr : 1);
             cfg.practice_level = l < 1 ? 5 : l > 5 ? 1 : l;
             frontend_settings_changed();
@@ -1064,6 +1094,8 @@ void home_inputs(uint32_t held[2])
             held[1] &= ~(1u << BTN_START);
             open_page(PAGE_PAUSE, PAUSE_CONTINUE);
             h.pause_dummy = cfg.dummy;
+            h.pause_player = p;
+            h.moves_open = false;
             break;
         }
     }
@@ -1312,12 +1344,54 @@ static void draw_next(uint32_t *ov)
     }
 }
 
+// The MOVE LIST: a heading per kind of move, names on the left, inputs on
+// the right, scrolled with up and down; what the shorthand means below.
+static void draw_moves(uint32_t *ov)
+{
+    veil(ov, 215);
+    const char *m = moves_text();
+    if (!m) { h.moves_open = false; return; }
+    unsigned slot = ram2[game.fighter_slot + (uint32_t)h.pause_player * game.player_step];
+    const char *name = slot < 11 && game.fighter_names[slot] ? game.fighter_names[slot] : "";
+    text_c(ov, F_BIG, 6, name, C_SEL, 255);
+    int line = 0, y = 32, shown = 0;
+    while (*m && shown < MOVES_SHOWN) {
+        const char *end = strchr(m, '\n');
+        int len = end ? (int)(end - m) : (int)strlen(m);
+        if (line++ >= h.moves_top) {
+            char buf[80], in[80];
+            snprintf(buf, sizeof buf, "%.*s", len, m);
+            for (char *c = buf; *c; c++) *c = (char)toupper((unsigned char)*c);
+            char *bar = strchr(buf, '|');
+            if (buf[0] == '#') text(ov, F_SMALL, 10, y, buf + 1, C_SEL, 255);
+            else if (bar) {
+                *bar = 0;
+                snprintf(in, sizeof in, "%s", bar + 1);
+                text(ov, F_SMALL, 18, y, buf, C_ITEM, 255);
+                text(ov, F_SMALL, 312 - text_width(F_SMALL, in), y, in, 0xffffff, 255);
+            }
+            y += 11;
+            shown++;
+        }
+        m = end ? end + 1 : m + len;
+    }
+    int total = moves_lines(moves_text());
+    if (h.moves_top > 0) text(ov, F_SMALL, 300, 22, "^", C_ITEM, 255);
+    if (h.moves_top + MOVES_SHOWN < total) text(ov, F_SMALL, 300, 32 + MOVES_SHOWN * 11, "v", C_ITEM, 255);
+    static const char *const legend[] = {
+        "F TOWARD, B AWAY.  QCF: D,DF,F", "QCB: D,DB,B.  HCF: B,DB,D,DF,F", "HCB: F,DF,D,DB,B.  CB,F: HOLD B, F",
+        "QP MP FP, QK MK FK: QUICK MED FIERCE", "P/K: ANY PUNCH/KICK.  H HOLD, R LET GO",
+    };
+    for (int i = 0; i < 5; i++) text_c(ov, F_SMALL, 187 + i * 10, legend[i], C_DIM, 255);
+}
+
 static void draw_pause(uint32_t *ov)
 {
+    if (h.moves_open) { draw_moves(ov); return; }
     veil(ov, 150);
     char dummy[32];
     snprintf(dummy, sizeof dummy, "DUMMY: %s", dummy_names[cfg.dummy % DUMMY_COUNT]);
-    const char *const items[PAUSE_COUNT] = { "CONTINUE", dummy, "CPU LEVEL: ", "MAIN MENU" };
+    const char *const items[PAUSE_COUNT] = { "CONTINUE", "MOVE LIST", dummy, "CPU LEVEL: ", "MAIN MENU" };
     text_c(ov, F_BIG, 90, "PAUSE", C_ITEM, 255);
     int y = 120, a = fade_in();
     for (int i = 0; i < PAUSE_COUNT; i++) {
@@ -1343,7 +1417,19 @@ static void draw_practice_hud(uint32_t *ov)
         for (int x = 0; x < 320; x++) blend(&ov[y * 320 + x], 0x000000, a);
     }
     text(ov, F_BODY, 8, 6, "PRACTICE", C_ITEM, 255);
-    if ((h.anim++ / 40) % 2 == 0) text(ov, F_SMALL, 104, 8, "- PRESS START", C_ITEM, 255);
+    if ((h.anim / 40) % 2 == 0) text(ov, F_SMALL, 104, 8, "- PRESS START", C_ITEM, 255);
+    // The arcade's flashing line at the end of the health bar, which the
+    // bars' absence hides: shadow moves ready after a combo breaker, and
+    // how many are left.
+    unsigned n = game.fighter_shadow ? ram2[game.fighter_shadow] : 0;
+    if (n && n <= 9) {
+        uint32_t c = (h.anim / 6) % 2 ? C_SEL : 0xffffff;
+        text(ov, F_BODY, 222, 6, "SHADOW", c, 255);
+        for (unsigned i = 0; i < n && i < 5; i++)
+            for (int y = 7; y < 14; y++)
+                for (int x = 0; x < 5; x++) blend(&ov[y * 320 + 276 + (int)i * 8 + x], c, 255);
+    }
+    h.anim++;
 }
 
 // Practice against the CPU: which of the two picks this is.
