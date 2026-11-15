@@ -808,11 +808,10 @@ static void list_build(void)
     if (n < 0 || n >= (int)sizeof list_buf) return;
     snprintf(list_buf + n, sizeof list_buf - (size_t)n,
         "#WHAT IT ALL MEANS\n"
-        "~F|FORWARD {F}\n~B|BACK {B}\n~U|UP {U}\n~D|DOWN {D}\n"
-        "~DF|DOWN-FORWARD {DF}\n~DB|DOWN-BACK {DB}\n"
-        "~QCF|{D}{DF}{F}\n~QCB|{D}{DB}{B}\n"
-        "~HCF|{B}{DB}{D}{DF}{F}\n~HCB|{F}{DF}{D}{DB}{B}\n"
-        "~CB,F|HOLD {B} 1 SEC, THEN {F}\n~CF,B|HOLD {F} 1 SEC, THEN {B}\n"
+        "!ARROWS ARE FOR FACING RIGHT;\n"
+        "!  ON THE RIGHT SIDE, FLIP THEM\n"
+        "~C|HOLD THAT WAY 1 SEC FIRST\n"
+        "~+|WITH THE LAST DIRECTION\n"
         "~QP|QUICK PUNCH (%s)\n~MP|MEDIUM PUNCH (%s)\n~FP|FIERCE PUNCH (%s)\n"
         "~QK|QUICK KICK (%s)\n~MK|MEDIUM KICK (%s)\n~FK|FIERCE KICK (%s)\n"
         "~P|ANY PUNCH (%s %s %s)\n~K|ANY KICK (%s %s %s)\n"
@@ -821,10 +820,8 @@ static void list_build(void)
         b[0], b[1], b[2], b[3], b[4], b[5], b[0], b[1], b[2], b[3], b[4], b[5]);
     // shorthand only some lists use
     static const char *const extra[][2] = {
-        { "QCDF", "~QCDF|{DB}{D}{DF}\n" },
-        { "QCDB", "~QCDB|{DF}{D}{DB}\n" },
         { "BLOCK", "~BLOCK|ONE BOX OF THE SUPER METER\n" },
-        { " BAR\n", "~BAR|THE SUPER METER:\n!1/4 BAR: 3 RED BOXES\n"
+        { "1/2 BAR", "~BAR|THE SUPER METER:\n!1/4 BAR: 3 RED BOXES\n"
                     "!1/2 BAR: FLASHING RED\n!FULL BAR: ALL OF IT\n" },
         { "SKULL", "~SKULL|SPINAL'S SKULLS, UNDER HIS BAR\n" },
     };
@@ -833,6 +830,54 @@ static void list_build(void)
         if (body && strstr(body, extra[i][0]) && len < sizeof list_buf)
             snprintf(list_buf + len, sizeof list_buf - len, "%s", extra[i][1]);
     }
+}
+
+static bool next_motion(const char *in, const char *const motion[][2], size_t n)
+{
+    for (size_t i = 0; i < n; i++) {
+        size_t l = strlen(motion[i][0]);
+        if (!strncmp(in, motion[i][0], l) && !isalnum((unsigned char)in[l])) return true;
+    }
+    return false;
+}
+
+// A move's input with its motions drawn as arrows: "F,QCF+P" becomes
+// "{F},{D}{DF}{F}+P", "CB,F" "C{B},{F}". Only whole words are motions, so
+// CLOSE, IN THE AIR and the like stay as they are.
+static void with_arrows(const char *in, char *out, size_t size)
+{
+    static const char *const motion[][2] = {
+        { "QCDF", "{DB}{D}{DF}" }, { "QCDB", "{DF}{D}{DB}" },
+        { "QCF", "{D}{DF}{F}" }, { "QCB", "{D}{DB}{B}" },
+        { "HCF", "{B}{DB}{D}{DF}{F}" }, { "HCB", "{F}{DF}{D}{DB}{B}" },
+        { "CB", "C{B}" }, { "CF", "C{F}" }, { "CD", "C{D}" },
+        { "DF", "{DF}" }, { "DB", "{DB}" }, { "UF", "{UF}" }, { "UB", "{UB}" },
+        { "F", "{F}" }, { "B", "{B}" }, { "D", "{D}" }, { "U", "{U}" },
+    };
+    size_t o = 0;
+    bool start = true;
+    while (*in && o + 1 < size) {
+        const char *rep = NULL;
+        size_t len = 0;
+        for (size_t i = 0; start && i < sizeof motion / sizeof motion[0]; i++) {
+            size_t l = strlen(motion[i][0]);
+            if (!strncmp(in, motion[i][0], l) && !isalnum((unsigned char)in[l])) { rep = motion[i][1]; len = l; break; }
+        }
+        if (rep) {
+            int w = snprintf(out + o, size - o, "%s", rep);
+            if (w < 0 || (size_t)w >= size - o) break;
+            o += (size_t)w;
+            in += len;
+            start = false;
+        } else if (*in == ',' && o && out[o - 1] == '}' && next_motion(in + 1, motion, sizeof motion / sizeof motion[0])) {
+            in++;               // F,D,DF is one motion: no commas between its arrows
+            start = true;
+        } else {
+            start = !isalnum((unsigned char)*in) && *in != '\'';
+            out[o++] = *in++;
+        }
+    }
+    out[o] = 0;
 }
 
 static int list_lines(void)
@@ -1379,7 +1424,11 @@ static void draw_list(uint32_t *ov)
                 if (bar) rich(ov, 82, y, bar, 0xffffff);
             } else {
                 text(ov, F_SMALL, 18, y, buf, C_ITEM, 255);
-                if (bar) rich(ov, 312 - rich(NULL, 0, 0, bar, 0), y, bar, 0xffffff);
+                if (bar) {
+                    char arrows[200];
+                    with_arrows(bar, arrows, sizeof arrows);
+                    rich(ov, 312 - rich(NULL, 0, 0, arrows, 0), y, arrows, 0xffffff);
+                }
             }
             y += 11;
             shown++;
