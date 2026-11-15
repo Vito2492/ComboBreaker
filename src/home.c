@@ -808,8 +808,8 @@ static void list_build(void)
     if (n < 0 || n >= (int)sizeof list_buf) return;
     snprintf(list_buf + n, sizeof list_buf - (size_t)n,
         "#WHAT IT ALL MEANS\n"
-        "!ARROWS ARE FOR FACING RIGHT;\n"
-        "!  ON THE RIGHT SIDE, FLIP THEM\n"
+        "!ARROWS ARE FOR THE SIDE YOU ARE\n"
+        "!  ON NOW; SWAP SIDES, FLIP THEM\n"
         "~C|HOLD THAT WAY 1 SEC FIRST\n"
         "~+|WITH THE LAST DIRECTION\n"
         "~QP|QUICK PUNCH (%s)\n~MP|MEDIUM PUNCH (%s)\n~FP|FIERCE PUNCH (%s)\n"
@@ -839,6 +839,30 @@ static bool next_motion(const char *in, const char *const motion[][2], size_t n)
         if (!strncmp(in, motion[i][0], l) && !isalnum((unsigned char)in[l])) return true;
     }
     return false;
+}
+
+// Whether a player stands right of the other, so faces left: the lists are
+// written for facing right.
+static bool on_right(int p)
+{
+    if (!game.fighter_x || !game.fight_scene || !ram2[game.fight_scene]) return false;
+    int32_t me, them;
+    memcpy(&me, &ram2[game.fighter_x + (uint32_t)p * game.health_step], 4);
+    memcpy(&them, &ram2[game.fighter_x + (uint32_t)(1 - p) * game.health_step], 4);
+    return me > them;
+}
+
+// Arrows turned left for right: {F} becomes {B}, {DF} {DB} and so on.
+static void mirror(char *s)
+{
+    for (; (s = strchr(s, '{')); s++) {
+        char *e = strchr(s, '}');
+        if (!e) return;
+        for (char *c = s + 1; c < e; c++)
+            if (*c == 'F') *c = 'B';
+            else if (*c == 'B') *c = 'F';
+        s = e;
+    }
 }
 
 // A move's input with its motions drawn as arrows: "F,QCF+P" becomes
@@ -1427,6 +1451,7 @@ static void draw_list(uint32_t *ov)
                 if (bar) {
                     char arrows[200];
                     with_arrows(bar, arrows, sizeof arrows);
+                    if (on_right(h.pause_player)) mirror(arrows);
                     rich(ov, 312 - rich(NULL, 0, 0, arrows, 0), y, arrows, 0xffffff);
                 }
             }
