@@ -7,7 +7,8 @@
 #include "shaders.h"
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef __ANDROID__
+#include "platform.h"
+#if UC_PHONE
 #include "touch.h"
 #endif
 
@@ -47,7 +48,7 @@ static void sdl_present(const uint32_t *game, const uint32_t *overlay, int filte
     SDL_RenderClear(ren);
     SDL_RenderCopy(ren, ren_game, NULL, NULL);
     SDL_RenderCopy(ren, ren_over, NULL, NULL);
-#ifdef __ANDROID__
+#if UC_PHONE
     if (touch_on) {
         int w, h;
         SDL_RenderSetLogicalSize(ren, 0, 0);
@@ -302,7 +303,7 @@ SDL_Window *video_open(const char *title, int w, int h)
 {
     win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h,
                            SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI);
-#ifdef __ANDROID__
+#if UC_PHONE
     bool try_gl = false;                    // phones have OpenGL ES: the SDL renderer draws with it
 #else
     bool try_gl = !getenv("KI2_NO_GL");
