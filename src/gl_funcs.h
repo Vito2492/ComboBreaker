@@ -2,12 +2,27 @@
 // libGL / opengl32). video.c defines them; shaders.c uses them too.
 #pragma once
 #include <SDL2/SDL.h>
+#include "platform.h"
+#if UC_IOS
+// iOS has only OpenGL ES, whose header SDL_opengl.h leaves out. The
+// desktop paths are never taken there (video.c), but must compile.
+#define GLES_SILENCE_DEPRECATION
+#include <OpenGLES/ES3/gl.h>
+#include <OpenGLES/ES3/glext.h>
+#ifndef APIENTRY
+#define APIENTRY
+#endif
+#else
 #include <SDL2/SDL_opengl.h>
+#endif
 
 #ifndef GL_FRAMEBUFFER
 #define GL_FRAMEBUFFER 0x8D40
 #define GL_COLOR_ATTACHMENT0 0x8CE0
 #define GL_FRAMEBUFFER_COMPLETE 0x8CD5
+#endif
+#ifndef GL_BGRA
+#define GL_BGRA 0x80E1
 #endif
 #ifndef GL_RGBA16F
 #define GL_RGBA16F 0x881A

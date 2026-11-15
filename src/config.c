@@ -27,7 +27,8 @@ static const char *const pacing_names[] = { "auto", "audio", "vsync", 0 };
 static const char *const dummy_cfg_names[] = { "stand", "crouch", "jump", "block", "low_block", "combo", "cpu", 0 };
 static const char *const blood_names[] = { "none", "low", "medium", "high", 0 };
 static const char *const blood_colour_names[] = { "red", "white", 0 };
-#ifdef __ANDROID__
+#include "platform.h"
+#if UC_PHONE
 static const char *const touch_names[] = { "auto", "on", "off", 0 };
 #endif
 static const char *const filter_names[] = { "sharp", "smooth", "scanlines", "crt", 0 };
@@ -182,7 +183,7 @@ static void build_table(void)
     add("gamepad", "p1_labels", T_ENUM, &cfg.pad_family[0], "auto",
         "button labels: auto, xbox, playstation, switch, positions; bindings stay unchanged", family_names);
     add("gamepad", "p2_labels", T_ENUM, &cfg.pad_family[1], "auto", "player 2 button labels", family_names);
-#ifdef __ANDROID__
+#if UC_PHONE
     add("gamepad", "touch_controls", T_ENUM, &cfg.touch_controls, "auto",
         "on-screen controls: auto (while no pad is connected, or once the screen is touched), on, off", touch_names);
 #endif

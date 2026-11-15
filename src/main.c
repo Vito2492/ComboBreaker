@@ -35,6 +35,7 @@
 #include "training.h"
 #include "home.h"
 #include "adjust.h"
+#include "platform.h"
 #ifdef __ANDROID__
 #include "android.h"
 #endif
@@ -126,6 +127,20 @@ const char *data_dir(void)
     dir = SDL_GetPrefPath("", PRODUCT);
     if (dir) return dir;
 #endif
+#if UC_IOS
+    // the app's Documents folder, which the Files app shows as On My iPhone >
+    // ComboBreaker; the game files go in its run folder
+    const char *home = getenv("HOME");
+    if (home) {
+        size_t n = strlen(home) + 16;
+        dir = malloc(n);
+        snprintf(dir, n, "%s/Documents/", home);
+        char run[4200];
+        snprintf(run, sizeof run, "%srun", dir);
+        mkdir(run, 0755);
+        return dir;
+    }
+#endif
     if (writable_dir(base_dir())) { dir = SDL_strdup(base_dir()); return dir; }
     const char *ai = appimage_dir();
     if (ai) {
@@ -158,7 +173,13 @@ const char *find_data(const char *name, char *buf, size_t n)
         if (readable(buf)) return buf;
     }
     snprintf(buf, n, "%srun/%s", data_dir(), name);
-    return readable(buf) ? buf : name;
+    if (readable(buf)) return buf;
+    // a MAME zip unpacked where it lies leaves a folder named after its set
+    for (const game_t *const *g = (const game_t *const[]){ &game_ki1, &game_ki2, NULL }; *g; g++) {
+        snprintf(buf, n, "%srun/%s/%s", data_dir(), (*g)->set, name);
+        if (readable(buf)) return buf;
+    }
+    return name;
 }
 
 static int version = -1;               // index into game.versions, -1 = custom ROM
@@ -657,6 +678,9 @@ void machine_restart_to_picker(void)
     static char exe[4096];
     GetModuleFileNameA(NULL, exe, sizeof exe);
     _execv(exe, (const char *const *)args);
+#elif UC_IOS
+    (void)args;                             // can't happen: the menu has no Change game
+    errno = ENOSYS;
 #else
     static char exe[4096];                  // the real path, so the process keeps its name
     ssize_t len = readlink("/proc/self/exe", exe, sizeof exe - 1);
@@ -724,7 +748,7 @@ int main(int argc, char **argv)
         }
         if (!choose_game(want, tool)) return 0;
     }
-#if defined _WIN32 || defined __ANDROID__
+#if defined _WIN32 || UC_PHONE
     {   // a GUI program has no console: keep the log beside the executable
         static char log[4096];
         snprintf(log, sizeof log, "%s%s.log", data_dir(), game.id);

@@ -24,7 +24,8 @@
 #include "game.h"
 #include "video.h"
 #include "shaders.h"
-#ifdef __ANDROID__
+#include "platform.h"
+#if UC_PHONE
 #include "touch.h"
 #endif
 #include <SDL2/SDL.h>
@@ -369,7 +370,7 @@ static void read_players(uint32_t held[2])
         held[p] |= pb[p];
     }
     pad_mirror_check(pb);
-#ifdef __ANDROID__
+#if UC_PHONE
     if (touch_shown(pads[0] != NULL)) held[0] |= touch_held();
 #endif
     // SOCD cleaning: opposite directions together resolve the way fight sticks do
@@ -705,6 +706,9 @@ static int display_modes(SDL_DisplayMode *out, int max)
 // Rows that don't apply to this game.
 static bool row_hidden(int row)
 {
+#if UC_IOS
+    if (menu_page == PG_MAIN && row == M_CHANGE) return true;      // iOS can't restart a program: the game is picked at start
+#endif
     if (menu_page == PG_MAIN) return row == M_CHANGE && (!machine_both_installed() || launch_active());   // a launcher picks the game
     if (menu_page != PG_GAME) return false;
     if (row == S_AUTOCOIN) return !game.credits;
@@ -947,7 +951,7 @@ unsigned frontend_menu_buttons(void)
     if (ks[SDL_SCANCODE_BACKSPACE]) m |= MB_B | MB_SELECT;
     if (ks[SDL_SCANCODE_DELETE]) m |= MB_Y;
     if (ks[SDL_SCANCODE_INSERT]) m |= MB_X;
-#ifdef __ANDROID__
+#if UC_PHONE
     if (touch_shown(pads[0] != NULL)) m |= touch_menu_buttons();
     if (ks[SDL_SCANCODE_AC_BACK]) m |= MB_B;
 #endif
@@ -1295,7 +1299,7 @@ static bool handle_events(void)
     SDL_Event ev;
     while (SDL_PollEvent(&ev)) {
         pad_prompt_event(&pad_prompt, &ev);
-#ifdef __ANDROID__
+#if UC_PHONE
         if (touch_shown(pads[0] != NULL) || cfg.touch_controls != TOUCH_OFF) {
             int w, h;
             SDL_GetWindowSizeInPixels(win, &w, &h);
@@ -1309,7 +1313,13 @@ static bool handle_events(void)
 #endif
         switch (ev.type) {
         case SDL_QUIT: return false;
-        case SDL_APP_WILLENTERBACKGROUND: rec_build_leaving(); break;
+        case SDL_APP_WILLENTERBACKGROUND:
+            rec_build_leaving();
+#if UC_PHONE
+            config_save();              // the system may close a phone app in the background
+            ide_flush();
+#endif
+            break;
         case SDL_CONTROLLERDEVICEADDED: pad_added(ev.cdevice.which); break;
         case SDL_CONTROLLERDEVICEREMOVED: pad_removed(ev.cdevice.which); break;
         case SDL_WINDOWEVENT:
@@ -1397,7 +1407,7 @@ static bool handle_events(void)
         }
     }
     check_quit_hold();
-#ifdef __ANDROID__
+#if UC_PHONE
     // the on-screen controls: the menu button, and the program's menu
     bool shown = touch_shown(pads[0] != NULL), tapped = false;
     video_set_touch(shown);
