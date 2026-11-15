@@ -1,4 +1,5 @@
 // The game picker (picker.h): a small window with a tile per game.
+#include "platform.h"
 #include "picker.h"
 #include "controller_labels.h"
 #include "icon.h"
@@ -326,13 +327,21 @@ static void welcome_draw(const game_t *const *games, const char *folder, const c
     y += 16;
     snprintf(line, sizeof line, "Put them in this folder:");
     glyphs(wpx, WW, WH, 40, y, line, strlen(line), 0xffffff, 2);
+#if UC_IOS
+    y = path_lines(64, y + 26, "Files app: On My iPhone > ComboBreaker > run (a MAME zip can be unzipped there)", 0x80c0ff);
+#else
     y = path_lines(64, y + 26, folder, 0x80c0ff);
+#endif
     if (*alt) {
         glyphs(wpx, WW, WH, 40, y, "or:", 3, 0xffffff, 2);
         path_lines(64, y + 22, alt, 0x80c0ff);
     }
     if (*status) centred(WH - 96, status, status_rgb, 2);
+#if UC_PHONE
+    centred(WH - 60, "Tap: check again, else open the folder", 0x909090, 2);
+#else
     centred(WH - 60, "O  open the folder     Enter  check again     Esc  quit", 0x909090, 2);
+#endif
     centred(WH - 34, "File names: README.md, or github.com/thefixinhixon/UltraCombo", 0x606060, 2);
 }
 
@@ -343,7 +352,11 @@ static bool open_folder(const char *dir)
     struct stat st;
     if (stat(dir, &st) || !S_ISDIR(st.st_mode)) return false;
     char url[4200];
+#if UC_IOS
+    snprintf(url, sizeof url, "shareddocuments://%s", dir);     // the Files app, at that folder
+#else
     snprintf(url, sizeof url, "file://%s%s", dir[0] == '/' ? "" : "/", dir);
+#endif
     return SDL_OpenURL(url) == 0;
 }
 
@@ -392,6 +405,19 @@ int picker_welcome(const game_t *const *games, const char *folder, const char *a
             case SDL_KEYUP:                      // on release: the game's window mustn't get it as held
                 if (ev.key.keysym.sym == SDLK_RETURN || ev.key.keysym.sym == SDLK_KP_ENTER || ev.key.keysym.sym == SDLK_SPACE) check = true;
                 break;
+#if UC_PHONE
+            case SDL_MOUSEBUTTONUP:              // a tap: check, and if they're not there yet, the folder
+                if (found()) check = true;
+                else {
+                    bool opened = open_folder(folder);
+                    status = opened ? "Copy the files in, then come back and tap" : "Couldn't open the Files app";
+                    status_rgb = opened ? 0x60c060 : 0xc05050;
+                }
+                break;
+            case SDL_APP_DIDENTERFOREGROUND:     // back from the Files app
+                check = found();
+                break;
+#endif
             case SDL_CONTROLLERBUTTONDOWN:
                 if (ev.cbutton.button == SDL_CONTROLLER_BUTTON_A || ev.cbutton.button == SDL_CONTROLLER_BUTTON_START) check = true;
                 if (ev.cbutton.button == SDL_CONTROLLER_BUTTON_B || ev.cbutton.button == SDL_CONTROLLER_BUTTON_BACK) done = true;
